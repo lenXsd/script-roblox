@@ -1,0 +1,685 @@
+-- Espera a que el jugador y su GUI estén listos
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Servicios
+local RunService = game:GetService("RunService")
+local PlayersService = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local PathfindingService = game:GetService("PathfindingService")
+
+local conexionesActivas = {}
+
+--=================================================
+-- 1. CREAR LOS OBJETOS DE LA GUI
+--=================================================
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MenuScripted"
+screenGui.ResetOnSpawn = false 
+screenGui.Parent = playerGui
+
+local menuContent = Instance.new("Frame")
+menuContent.Name = "MenuContent"
+menuContent.Parent = screenGui
+menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
+menuContent.BorderSizePixel = 2
+menuContent.Size = UDim2.new(0, 180, 0, 290) 
+menuContent.BackgroundTransparency = 0.3 
+menuContent.Position = UDim2.new(0, 10, 0, 50) 
+menuContent.Visible = false 
+menuContent.Draggable = true
+menuContent.Active = true 
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Parent = screenGui
+toggleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.BackgroundTransparency = 0.3
+toggleButton.BorderColor3 = Color3.fromRGB(20, 20, 20)
+toggleButton.BorderSizePixel = 2
+toggleButton.Size = UDim2.new(0, 80, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.Text = "Menú"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 18
+
+local botonOpcion1 = Instance.new("TextButton")
+botonOpcion1.Name = "Opcion1"
+botonOpcion1.Parent = menuContent
+botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion1.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion1.Font = Enum.Font.SourceSans
+botonOpcion1.TextSize = 18
+botonOpcion1.Text = "Seguir Jugador" 
+botonOpcion1.Size = UDim2.new(0.9, 0, 0, 30) 
+botonOpcion1.Position = UDim2.new(0.05, 0, 0, 10) 
+
+local botonOpcion2 = Instance.new("TextButton")
+botonOpcion2.Name = "Opcion2"
+botonOpcion2.Parent = menuContent
+botonOpcion2.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion2.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion2.Font = Enum.Font.SourceSans
+botonOpcion2.TextSize = 18
+botonOpcion2.Text = "Autoapuntado: OFF"
+botonOpcion2.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion2.Position = UDim2.new(0.05, 0, 0, 50) 
+
+local botonOpcion3 = Instance.new("TextButton")
+botonOpcion3.Name = "Opcion3"
+botonOpcion3.Parent = menuContent
+botonOpcion3.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion3.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion3.Font = Enum.Font.SourceSans
+botonOpcion3.TextSize = 18
+botonOpcion3.Text = "Seguir (Player)"
+botonOpcion3.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion3.Position = UDim2.new(0.05, 0, 0, 90)
+
+local botonOpcion4 = Instance.new("TextButton")
+botonOpcion4.Name = "Opcion4"
+botonOpcion4.Parent = menuContent
+botonOpcion4.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion4.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion4.Font = Enum.Font.SourceSans
+botonOpcion4.TextSize = 18
+botonOpcion4.Text = "Salto Aire"
+botonOpcion4.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion4.Position = UDim2.new(0.05, 0, 0, 130) 
+
+local botonOpcion5 = Instance.new("TextButton")
+botonOpcion5.Name = "Opcion5"
+botonOpcion5.Parent = menuContent
+botonOpcion5.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion5.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion5.Font = Enum.Font.SourceSans
+botonOpcion5.TextSize = 18
+botonOpcion5.Text = "Resaltar: OFF"
+botonOpcion5.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion5.Position = UDim2.new(0.05, 0, 0, 170) 
+
+local botonOpcion6 = Instance.new("TextButton")
+botonOpcion6.Name = "Opcion6"
+botonOpcion6.Parent = menuContent
+botonOpcion6.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+botonOpcion6.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion6.Font = Enum.Font.SourceSans
+botonOpcion6.TextSize = 18
+botonOpcion6.Text = "Teleport"
+botonOpcion6.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion6.Position = UDim2.new(0.05, 0, 0, 210) 
+
+local botonOpcion7 = Instance.new("TextButton")
+botonOpcion7.Name = "Opcion7"
+botonOpcion7.Parent = menuContent
+botonOpcion7.BackgroundColor3 = Color3.fromRGB(170, 40, 40) 
+botonOpcion7.TextColor3 = Color3.fromRGB(255, 255, 255)
+botonOpcion7.Font = Enum.Font.SourceSansBold
+botonOpcion7.TextSize = 18
+botonOpcion7.Text = "DETENER SCRIPT"
+botonOpcion7.Size = UDim2.new(0.9, 0, 0, 30)
+botonOpcion7.Position = UDim2.new(0.05, 0, 0, 250) 
+
+--- Menú de Teleport ---
+local tpMenu = Instance.new("Frame")
+tpMenu.Name = "TeleportMenu"
+tpMenu.Parent = screenGui
+tpMenu.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+tpMenu.BorderColor3 = Color3.fromRGB(20, 20, 20)
+tpMenu.BorderSizePixel = 2
+tpMenu.Size = UDim2.new(0, 200, 0, 100) 
+tpMenu.Position = UDim2.new(0.5, -100, 0.5, -50) 
+tpMenu.BackgroundTransparency = 0.3 
+tpMenu.Visible = false
+tpMenu.Draggable = true
+tpMenu.Active = true
+
+local playerNameBox = Instance.new("TextBox")
+playerNameBox.Name = "PlayerNameBox"
+playerNameBox.Parent = tpMenu
+playerNameBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+playerNameBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+playerNameBox.Text = "Escribe un nombre..."
+playerNameBox.PlaceholderText = "Nombre del jugador"
+playerNameBox.TextSize = 16
+playerNameBox.Font = Enum.Font.SourceSans
+playerNameBox.Size = UDim2.new(0.9, 0, 0, 30)
+playerNameBox.Position = UDim2.new(0.05, 0, 0, 10)
+
+local tpButton = Instance.new("TextButton")
+tpButton.Name = "TPButton"
+tpButton.Parent = tpMenu
+tpButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+tpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpButton.Text = "Teletransportar"
+tpButton.TextSize = 16
+tpButton.Font = Enum.Font.SourceSansBold
+tpButton.Size = UDim2.new(0.425, 0, 0, 40)
+tpButton.Position = UDim2.new(0.05, 0, 0, 50)
+
+local tpLoopButton = Instance.new("TextButton")
+tpLoopButton.Name = "TPLoopButton"
+tpLoopButton.Parent = tpMenu
+tpLoopButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+tpLoopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpLoopButton.Text = "Loop TP"
+tpLoopButton.TextSize = 16
+tpLoopButton.Font = Enum.Font.SourceSansBold
+tpLoopButton.Size = UDim2.new(0.425, 0, 0, 40)
+tpLoopButton.Position = UDim2.new(0.525, 0, 0, 50)
+
+--=================================================
+-- 2. LÓGICA DEL MENÚ Y SEGUIMIENTO
+--=================================================
+
+local menuEstaVisible = false
+local function onToggleClick()
+	menuEstaVisible = not menuEstaVisible
+	menuContent.Visible = menuEstaVisible
+	if menuEstaVisible then toggleButton.Text = "Cerrar" else toggleButton.Text = "Menú" end
+end
+
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+raycastParams.FilterDescendantsInstances = {player.Character}
+
+local estaSiguiendo = false
+local estaSiguiendoEquipo = false
+local conexionDeSeguimiento = nil
+local conexionSeguimientoEquipo = nil
+
+-- --- Lógica Opción 1 (Seguir a Todos) ---
+local function encontrarJugadorMasCercano()
+	local jugadorLocalChar = player.Character
+	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
+	local raizLocal = jugadorLocalChar.HumanoidRootPart
+	local distanciaMinima = math.huge
+	local objetivo = nil
+	for _, otroJugador in pairs(PlayersService:GetPlayers()) do
+		if otroJugador ~= player then
+			local otroChar = otroJugador.Character
+			if otroChar and otroChar:FindFirstChild("HumanoidRootPart") and otroChar.Humanoid.Health > 0 then
+				local raizObjetivo = otroChar.HumanoidRootPart
+				local distancia = (raizLocal.Position - raizObjetivo.Position).Magnitude
+				if distancia < distanciaMinima then
+					distanciaMinima = distancia
+					objetivo = otroChar
+				end
+			end
+		end
+	end
+	return objetivo
+end
+
+--- Bucle de seguimiento (Híbrido + Control de Usuario) ---
+local function bucleDeSeguimiento()
+	local char = player.Character
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not rootPart then return end
+	
+	-- CONTROL DE USUARIO: Si te mueves, el script pausa --
+	if humanoid.MoveDirection.Magnitude > 0.1 then
+		humanoid:Move(humanoid.MoveDirection, false) 
+		return 
+	end
+
+	local objetivo = encontrarJugadorMasCercano()
+	if not objetivo or not objetivo:FindFirstChild("HumanoidRootPart") then
+		humanoid:MoveTo(rootPart.Position) 
+		return
+	end
+	
+	local origen = rootPart.Position
+	local destino = objetivo.HumanoidRootPart.Position
+	local direccion = (destino - origen)
+
+	local hayObstaculo = false
+	local rayoOffsetAltura = 2 
+	local rayoOffsetPies = -1.5 
+	local distanciaRayoAdicional = 5 
+	local origenesRayos = {
+		origen, 
+		origen + Vector3.new(0, rayoOffsetAltura, 0), 
+		origen + Vector3.new(0, rayoOffsetPies, 0),
+	}
+	for _, rayoOrigen in ipairs(origenesRayos) do
+		local resultado = workspace:Raycast(rayoOrigen, direccion.Unit * (direccion.Magnitude + distanciaRayoAdicional), raycastParams)
+		if resultado and not resultado.Instance:IsDescendantOf(objetivo) then
+			hayObstaculo = true
+			break
+		end
+	end
+
+	if not hayObstaculo then
+		humanoid:MoveTo(destino)
+	else
+		local path = PathfindingService:CreatePath()
+		local success, _ = pcall(function()
+			path:ComputeAsync(origen, destino)
+		end)
+		
+		if success and path.Status == Enum.PathStatus.Success then
+			local waypoints = path:GetWaypoints()
+			if waypoints[2] then
+				humanoid:MoveTo(waypoints[2].Position)
+			else
+				humanoid:MoveTo(destino) 
+			end
+		else
+			humanoid:MoveTo(destino) 
+		end
+	end
+end
+
+local function enOpcion1Click()
+	estaSiguiendo = not estaSiguiendo
+	if estaSiguiendo then
+		botonOpcion1.Text = "Seguir Jugador: ON"
+		botonOpcion1.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		conexionDeSeguimiento = RunService.Heartbeat:Connect(bucleDeSeguimiento)
+	else
+		botonOpcion1.Text = "Seguir Jugador"
+		botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+		if conexionDeSeguimiento then
+			conexionDeSeguimiento:Disconnect()
+			conexionDeSeguimiento = nil
+		end
+		local personajeLocal = player.Character
+		local humanoideLocal = personajeLocal and personajeLocal:FindFirstChildOfClass("Humanoid")
+		if humanoideLocal then
+			humanoideLocal:MoveTo(personajeLocal.HumanoidRootPart.Position)
+		end
+	end
+end
+
+-- --- Lógica Opción 3 (Seguir Equipo "Player") ---
+local function encontrarJugadorMasCercanoEnEquipoPlayer()
+	local jugadorLocalChar = player.Character
+	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
+	local raizLocal = jugadorLocalChar.HumanoidRootPart
+	local distanciaMinima = math.huge
+	local objetivo = nil
+	for _, otroJugador in pairs(PlayersService:GetPlayers()) do
+		if otroJugador ~= player then
+			local equipo = otroJugador.Team
+			if equipo and (equipo.Name == "Player" or equipo.Name == "Jugador") then
+				local otroChar = otroJugador.Character
+				if otroChar and otroChar:FindFirstChild("HumanoidRootPart") and otroChar.Humanoid.Health > 0 then
+					local raizObjetivo = otroChar.HumanoidRootPart
+					local distancia = (raizLocal.Position - raizObjetivo.Position).Magnitude
+					if distancia < distanciaMinima then
+						distanciaMinima = distancia
+						objetivo = otroChar
+					end
+				end
+			end
+		end
+	end
+	return objetivo
+end
+
+--- Bucle de seguimiento de equipo (Híbrido + Control de Usuario) ---
+local function bucleDeSeguimientoEquipo()
+	local char = player.Character
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not rootPart then return end
+
+	-- CONTROL DE USUARIO --
+	if humanoid.MoveDirection.Magnitude > 0.1 then
+		humanoid:Move(humanoid.MoveDirection, false) 
+		return
+	end
+
+	local objetivo = encontrarJugadorMasCercanoEnEquipoPlayer() 
+	if not objetivo or not objetivo:FindFirstChild("HumanoidRootPart") then
+		humanoid:MoveTo(rootPart.Position) -- Detenerse
+		return
+	end
+	
+	local origen = rootPart.Position
+	local destino = objetivo.HumanoidRootPart.Position
+	local direccion = (destino - origen)
+
+	local hayObstaculo = false
+	local rayoOffsetAltura = 2 
+	local rayoOffsetPies = -1.5 
+	local distanciaRayoAdicional = 5 
+	local origenesRayos = {
+		origen, 
+		origen + Vector3.new(0, rayoOffsetAltura, 0), 
+		origen + Vector3.new(0, rayoOffsetPies, 0),
+	}
+	for _, rayoOrigen in ipairs(origenesRayos) do
+		local resultado = workspace:Raycast(rayoOrigen, direccion.Unit * (direccion.Magnitude + distanciaRayoAdicional), raycastParams)
+		if resultado and not resultado.Instance:IsDescendantOf(objetivo) then
+			hayObstaculo = true
+			break
+		end
+	end
+
+	if not hayObstaculo then
+		humanoid:MoveTo(destino)
+	else
+		local path = PathfindingService:CreatePath()
+		local success, _ = pcall(function()
+			path:ComputeAsync(origen, destino)
+		end)
+		
+		if success and path.Status == Enum.PathStatus.Success then
+			local waypoints = path:GetWaypoints()
+			if waypoints[2] then
+				humanoid:MoveTo(waypoints[2].Position)
+			else
+				humanoid:MoveTo(destino)
+			end
+		else
+			humanoid:MoveTo(destino)
+		end
+	end
+end
+local function enOpcion3Click()
+	estaSiguiendoEquipo = not estaSiguiendoEquipo
+	if estaSiguiendoEquipo then
+		botonOpcion3.Text = "Seguir (Player): ON"
+		botonOpcion3.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		conexionSeguimientoEquipo = RunService.Heartbeat:Connect(bucleDeSeguimientoEquipo)
+	else
+		botonOpcion3.Text = "Seguir (Player)"
+		botonOpcion3.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+		if conexionSeguimientoEquipo then
+			conexionSeguimientoEquipo:Disconnect()
+			conexionSeguimientoEquipo = nil
+		end
+		local personajeLocal = player.Character
+		local humanoideLocal = personajeLocal and personajeLocal:FindFirstChildOfClass("Humanoid")
+		if humanoideLocal then
+			humanoideLocal:MoveTo(personajeLocal.HumanoidRootPart.Position)
+		end
+	end
+end
+
+--=================================================
+-- 3. OTRAS FUNCIONES
+--=================================================
+
+local camera = workspace.CurrentCamera
+local conexionDeAutoapuntado = nil
+local autoAimActivo = false 
+local tiempoSinMoverse = 0
+local TIEMPO_ESPERA_AIM = 0.3 
+local airJumpActivo = false
+
+-- (Lógica de Autoapuntado - Opción 2)
+local function bucleDeAutoapuntado(deltaTime)
+	if not camera then 
+		camera = workspace.CurrentCamera 
+		if not camera then return end
+	end
+	local personaje = player.Character
+	local herramientaEquipada = personaje and personaje:FindFirstChildOfClass("Tool")
+	if not herramientaEquipada then
+		tiempoSinMoverse = 0 
+		return 
+	end
+	tiempoSinMoverse = tiempoSinMoverse + deltaTime
+	if tiempoSinMoverse < TIEMPO_ESPERA_AIM then
+		return
+	end
+	local objetivo = encontrarJugadorMasCercano()
+	if objetivo and objetivo:FindFirstChild("Head") then
+		local posCamara = camera.CFrame.Position
+		local posObjetivo = objetivo.Head.Position
+		camera.CFrame = CFrame.lookAt(posCamara, posObjetivo)
+	end
+end
+local function iniciarAutoapuntado()
+	if not conexionDeAutoapuntado then
+		tiempoSinMoverse = 0 
+		conexionDeAutoapuntado = RunService.RenderStepped:Connect(bucleDeAutoapuntado)
+	end
+end
+local function detenerAutoapuntado()
+	if conexionDeAutoapuntado then
+		conexionDeAutoapuntado:Disconnect()
+		conexionDeAutoapuntado = nil
+	end
+	tiempoSinMoverse = 0 
+end
+local function enOpcion2Click()
+	autoAimActivo = not autoAimActivo
+	if autoAimActivo then
+		iniciarAutoapuntado()
+		botonOpcion2.Text = "Autoapuntado: ON"
+		botonOpcion2.BackgroundColor3 = Color3.fromRGB(60, 140, 70)
+	else
+		detenerAutoapuntado()
+		botonOpcion2.Text = "Autoapuntado: OFF"
+		botonOpcion2.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+	end
+end
+local function reiniciarTemporizadorDePausa(inputObject)
+	if not autoAimActivo then return end
+	if inputObject.UserInputType == Enum.UserInputType.MouseMovement or
+	   inputObject.UserInputType == Enum.UserInputType.Touch or
+	   inputObject.UserInputType == Enum.UserInputType.Gamepad2 then
+		tiempoSinMoverse = 0
+	end
+end
+
+-- --- Lógica de Salto en el Aire (Opción 4) ---
+local function onJumpRequest()
+	if not airJumpActivo then return end
+	local char = player.Character
+	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+	if humanoid and rootPart and humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+		rootPart.Velocity = Vector3.new(rootPart.Velocity.X, humanoid.JumpPower, rootPart.Velocity.Z)
+	end
+end
+local function enOpcion4Click()
+	airJumpActivo = not airJumpActivo
+	if airJumpActivo then
+		botonOpcion4.Text = "Salto Aire: ON"
+		botonOpcion4.BackgroundColor3 = Color3.fromRGB(60, 140, 70)
+	else
+		botonOpcion4.Text = "Salto Aire"
+		botonOpcion4.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+	end
+end
+-----------------------------------------------
+
+--- Lógica de Resaltado de Aura (Opción 5) - VERSIÓN ROBUSTA POR BUCLE ---
+local resaltarActivo = false
+local conexionResaltar = nil
+local highlightObjects = {} -- Cache para no crear infinitos highlights
+
+local function aplicarResaltadoAura(character)
+	if not character or not character:IsA("Model") then return end
+	
+	-- Evitar resaltar al propio jugador
+	if character == player.Character then return end
+
+	if highlightObjects[character] then return end -- Ya tiene resaltado
+
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "PlayerHighlight"
+	highlight.FillTransparency = 1 -- Solo borde
+	highlight.OutlineTransparency = 0 
+	highlight.FillColor = Color3.fromRGB(255, 255, 255) 
+	highlight.OutlineColor = Color3.fromRGB(200, 200, 200)
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Adornee = character
+	highlight.Parent = character
+	highlightObjects[character] = highlight 
+end
+
+local function bucleDeResaltado()
+	-- 1. Resaltar a todos los jugadores vivos
+	for _, p in pairs(PlayersService:GetPlayers()) do
+		if p ~= player and p.Character then
+			aplicarResaltadoAura(p.Character)
+		end
+	end
+	
+	-- 2. Limpiar highlights de personajes que ya no existen
+	for char, highlight in pairs(highlightObjects) do
+		if not char.Parent then -- El personaje fue destruido
+			highlight:Destroy()
+			highlightObjects[char] = nil
+		end
+	end
+end
+
+local function enOpcion5Click()
+	resaltarActivo = not resaltarActivo
+	if resaltarActivo then
+		botonOpcion5.Text = "Resaltar: ON"
+		botonOpcion5.BackgroundColor3 = Color3.fromRGB(60, 140, 70)
+		
+		-- Iniciar bucle lento (10 veces por segundo es suficiente)
+		local lastCheck = 0
+		conexionResaltar = RunService.Heartbeat:Connect(function()
+			local now = os.clock()
+			if now - lastCheck > 0.1 then
+				lastCheck = now
+				bucleDeResaltado()
+			end
+		end)
+	else
+		botonOpcion5.Text = "Resaltar: OFF"
+		botonOpcion5.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
+		
+		if conexionResaltar then
+			conexionResaltar:Disconnect()
+			conexionResaltar = nil
+		end
+		
+		-- Limpiar todo
+		for char, highlight in pairs(highlightObjects) do
+			if highlight then highlight:Destroy() end
+		end
+		highlightObjects = {}
+	end
+end
+
+--- Lógica de Teleport (Opción 6) ---
+local tpLoopActive = false
+local conexionTpLoop = nil
+
+local function findPlayerByName(name)
+	local nameLower = name:lower()
+	if nameLower == "" or nameLower == "escribe un nombre..." then return nil end
+	for _, p in pairs(PlayersService:GetPlayers()) do
+		if p ~= player then
+			if string.find(p.Name:lower(), nameLower, 1, true) then return p.Character end
+		end
+	end
+	return nil
+end
+
+local function bucleTpLoop()
+	local targetChar = findPlayerByName(playerNameBox.Text)
+	local char = player.Character
+	if targetChar and char and char:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
+	end
+end
+
+local function onTpButtonClick()
+	local targetChar = findPlayerByName(playerNameBox.Text)
+	local char = player.Character
+	if targetChar and char and char:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
+		char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
+	end
+end
+
+local function onTpLoopButtonClick()
+	tpLoopActive = not tpLoopActive
+	if tpLoopActive then
+		conexionTpLoop = RunService.Heartbeat:Connect(bucleTpLoop)
+		tpLoopButton.Text = "Loop: ON"
+		tpLoopButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	else
+		if conexionTpLoop then conexionTpLoop:Disconnect(); conexionTpLoop = nil end
+		tpLoopButton.Text = "Loop TP"
+		tpLoopButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+	end
+end
+
+local function enOpcion6Click()
+	if tpMenu then tpMenu.Visible = not tpMenu.Visible end
+end
+
+--- Lógica Opción 7 (DETENER SCRIPT) ---
+local function enOpcion7Click()
+	detenerAutoapuntado()
+	
+	estaSiguiendo = false
+	if conexionDeSeguimiento then conexionDeSeguimiento:Disconnect(); conexionDeSeguimiento = nil end
+	estaSiguiendoEquipo = false
+	if conexionSeguimientoEquipo then conexionSeguimientoEquipo:Disconnect(); conexionSeguimientoEquipo = nil end
+	
+	airJumpActivo = false
+	
+	-- Limpiar Resaltado
+	resaltarActivo = false
+	if conexionResaltar then conexionResaltar:Disconnect(); conexionResaltar = nil end
+	for _, highlight in pairs(highlightObjects) do highlight:Destroy() end
+	highlightObjects = {}
+
+	if conexionTpLoop then conexionTpLoop:Disconnect() end
+	
+	for _, con in ipairs(conexionesActivas) do con:Disconnect() end
+	conexionesActivas = {} 
+	
+	if screenGui then screenGui:Destroy() end
+	
+	screenGui = nil; menuContent = nil; toggleButton = nil
+	botonOpcion1 = nil; botonOpcion2 = nil; botonOpcion3 = nil; botonOpcion4 = nil
+	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcion7 = nil
+end
+
+--=================================================
+-- 4. CONECTAR TODOS LOS EVENTOS
+--=================================================
+
+table.insert(conexionesActivas, toggleButton.MouseButton1Click:Connect(onToggleClick))
+table.insert(conexionesActivas, botonOpcion1.MouseButton1Click:Connect(enOpcion1Click))
+table.insert(conexionesActivas, botonOpcion2.MouseButton1Click:Connect(enOpcion2Click))
+table.insert(conexionesActivas, botonOpcion3.MouseButton1Click:Connect(enOpcion3Click))
+table.insert(conexionesActivas, botonOpcion4.MouseButton1Click:Connect(enOpcion4Click))
+table.insert(conexionesActivas, botonOpcion5.MouseButton1Click:Connect(enOpcion5Click))
+table.insert(conexionesActivas, botonOpcion6.MouseButton1Click:Connect(enOpcion6Click))
+table.insert(conexionesActivas, botonOpcion7.MouseButton1Click:Connect(enOpcion7Click))
+
+table.insert(conexionesActivas, menuContent:GetPropertyChangedSignal("Position"):Connect(function()
+	local newMenuPos = menuContent.Position
+	toggleButton.Position = UDim2.new(
+		newMenuPos.X.Scale, newMenuPos.X.Offset, 
+		newMenuPos.Y.Scale, newMenuPos.Y.Offset - 40 
+	)
+end))
+
+table.insert(conexionesActivas, UserInputService.InputChanged:Connect(reiniciarTemporizadorDePausa))
+table.insert(conexionesActivas, UserInputService.JumpRequest:Connect(onJumpRequest))
+
+table.insert(conexionesActivas, tpButton.MouseButton1Click:Connect(onTpButtonClick))
+table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopButtonClick))
+
+-- Actualizar el filtro del Rayo si el personaje muere
+local function conectarEventosDePersonaje(character)
+	if raycastParams then
+		raycastParams.FilterDescendantsInstances = {character}
+	end
+end
+
+table.insert(conexionesActivas, player.CharacterAdded:Connect(conectarEventosDePersonaje))
+
+if player.Character then
+	conectarEventosDePersonaje(player.Character)
+end
