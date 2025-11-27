@@ -1,0 +1,206 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Variables de estado
+local currentTrack = nil 
+local currentAnimId = nil 
+
+-- =================================================================
+-- 1. TUS EMOTES (IDs Guardados)
+-- =================================================================
+local ID_TORNADO = 135373056067761
+local ID_SENTARSE = 71112973269174
+
+local misEmotes = {
+	{Name = "Tornado (G)",  Id = ID_TORNADO},
+	{Name = "Sentarse (F)", Id = ID_SENTARSE}
+}
+
+-- Bloquear rueda original
+task.spawn(function()
+	for i = 1, 10 do 
+		pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, false) end)
+		task.wait(0.5) 
+	end
+end)
+
+-- =================================================================
+-- 2. GUI EN BARRA SUPERIOR (TOPBAR)
+-- =================================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TopBarMenu_Hotkeys"
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 100
+screenGui.IgnoreGuiInset = true 
+screenGui.Parent = playerGui
+
+-- CONTENEDOR PRINCIPAL
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "DragContainer"
+mainFrame.Size = UDim2.new(0, 110, 0, 32) 
+-- Posición alineada (Y=8)
+mainFrame.Position = UDim2.new(0, 230, 0, 8) 
+mainFrame.BackgroundTransparency = 1 
+mainFrame.Parent = screenGui
+
+-- BOTÓN "ACCIONES"
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ActionBtn"
+toggleBtn.Text = "ACCIONES"
+toggleBtn.Size = UDim2.new(1, 0, 1, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) 
+toggleBtn.BackgroundTransparency = 0.5
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 12 
+toggleBtn.Parent = mainFrame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(1, 0) 
+btnCorner.Parent = toggleBtn
+
+-- LISTA DESPLEGABLE
+local listFrame = Instance.new("Frame")
+listFrame.Name = "ListPanel"
+listFrame.Size = UDim2.new(1, 10, 0, 0) 
+listFrame.Position = UDim2.new(0, -5, 0, 38) 
+listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+listFrame.BackgroundTransparency = 0.2
+listFrame.Visible = false 
+listFrame.Parent = mainFrame
+
+local listCorner = Instance.new("UICorner")
+listCorner.CornerRadius = UDim.new(0, 8)
+listCorner.Parent = listFrame
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = listFrame
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 4)
+
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 8)
+padding.PaddingBottom = UDim.new(0, 8)
+padding.Parent = listFrame
+
+-- =================================================================
+-- 3. ARRASTRE
+-- =================================================================
+local dragging = false
+local dragStartMousePos = nil
+local startFramePos = nil
+
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStartMousePos = input.Position
+		startFramePos = mainFrame.Position 
+	end
+end)
+
+toggleBtn.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStartMousePos
+		mainFrame.Position = UDim2.new(
+			startFramePos.X.Scale, startFramePos.X.Offset + delta.X,
+			startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- =================================================================
+-- 4. LÓGICA DE INTERRUPTOR
+-- =================================================================
+
+local function stopCurrent()
+	if currentTrack then
+		currentTrack:Stop()
+		currentTrack = nil
+	end
+end
+
+local function toggleAnim(animId)
+	stopCurrent()
+	if currentAnimId == animId then
+		currentAnimId = nil
+		return 
+	end
+	currentAnimId = animId
+	
+	local char = player.Character
+	if not char then return end
+	local hum = char:FindFirstChild("Humanoid")
+	if not hum then return end
+	local animator = hum:FindFirstChild("Animator") or Instance.new("Animator", hum)
+	
+	local animation = Instance.new("Animation")
+	animation.AnimationId = "rbxassetid://" .. tostring(animId)
+	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
+	if success and track then
+		currentTrack = track; track.Priority = Enum.AnimationPriority.Action; track.Looped = true; track:Play()
+	end
+end
+
+local function killScript()
+	stopCurrent()
+	screenGui:Destroy()
+	script:Destroy()
+end
+
+-- =================================================================
+-- 5. DETECCIÓN DE TECLAS (F y G)
+-- =================================================================
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	-- gameProcessedEvent es verdadero si estás escribiendo en el chat o en un menú
+	-- Si es verdadero, NO hacemos nada para no interrumpir el chat.
+	if gameProcessedEvent then return end
+
+	if input.KeyCode == Enum.KeyCode.F then
+		toggleAnim(ID_SENTARSE) -- Activa Sentarse
+	elseif input.KeyCode == Enum.KeyCode.G then
+		toggleAnim(ID_TORNADO) -- Activa Tornado
+	end
+end)
+
+-- =================================================================
+-- 6. GENERAR BOTONES
+-- =================================================================
+local function createButton(text, color, order, callback)
+	local btn = Instance.new("TextButton")
+	btn.Text = text
+	btn.Size = UDim2.new(0.9, 0, 0, 30) 
+	btn.BackgroundColor3 = color
+	btn.BackgroundTransparency = 0.2
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.GothamSemibold
+	btn.TextSize = 11
+	btn.LayoutOrder = order
+	btn.Parent = listFrame
+	local uc = Instance.new("UICorner"); uc.CornerRadius = UDim.new(0, 6); uc.Parent = btn
+	btn.MouseButton1Click:Connect(callback)
+end
+
+for i, data in ipairs(misEmotes) do
+	createButton(data.Name, Color3.fromRGB(60, 60, 70), i, function() toggleAnim(data.Id) end)
+end
+
+createButton("💀 MATAR SCRIPT", Color3.fromRGB(200, 30, 30), 100, killScript)
+
+local totalHeight = (#misEmotes + 1) * 34 + 20 
+listFrame.Size = UDim2.new(1, 10, 0, totalHeight)
+
+toggleBtn.MouseButton1Click:Connect(function()
+	listFrame.Visible = not listFrame.Visible
+	if listFrame.Visible then toggleBtn.Text = "CERRAR" else toggleBtn.Text = "ACCIONES" end
+end)
