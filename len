@@ -53,7 +53,7 @@ botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 botonOpcion1.TextColor3 = Color3.fromRGB(255, 255, 255)
 botonOpcion1.Font = Enum.Font.SourceSans
 botonOpcion1.TextSize = 18
-botonOpcion1.Text = "Seguir Jugador" 
+botonOpcion1.Text = "Seguir Jugador (T)" 
 botonOpcion1.Size = UDim2.new(0.9, 0, 0, 30) 
 botonOpcion1.Position = UDim2.new(0.05, 0, 0, 10) 
 
@@ -75,7 +75,8 @@ botonOpcion3.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 botonOpcion3.TextColor3 = Color3.fromRGB(255, 255, 255)
 botonOpcion3.Font = Enum.Font.SourceSans
 botonOpcion3.TextSize = 18
-botonOpcion3.Text = "Seguir (Player)"
+-- ACTUALIZADO: Texto con atajo M3 --
+botonOpcion3.Text = "Seguir (Player) (M3)"
 botonOpcion3.Size = UDim2.new(0.9, 0, 0, 30)
 botonOpcion3.Position = UDim2.new(0.05, 0, 0, 90)
 
@@ -97,7 +98,7 @@ botonOpcion5.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 botonOpcion5.TextColor3 = Color3.fromRGB(255, 255, 255)
 botonOpcion5.Font = Enum.Font.SourceSans
 botonOpcion5.TextSize = 18
-botonOpcion5.Text = "Resaltar: OFF"
+botonOpcion5.Text = "Resaltar (R): OFF"
 botonOpcion5.Size = UDim2.new(0.9, 0, 0, 30)
 botonOpcion5.Position = UDim2.new(0.05, 0, 0, 170) 
 
@@ -184,7 +185,7 @@ end
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-raycastParams.FilterDescendantsInstances = {player.Character}
+raycastParams.FilterDescendantsInstances = {} 
 
 local estaSiguiendo = false
 local estaSiguiendoEquipo = false
@@ -214,14 +215,13 @@ local function encontrarJugadorMasCercano()
 	return objetivo
 end
 
---- Bucle de seguimiento (Híbrido + Control de Usuario) ---
 local function bucleDeSeguimiento()
 	local char = player.Character
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not rootPart then return end
 	
-	-- CONTROL DE USUARIO: Si te mueves, el script pausa --
+	-- CONTROL DE USUARIO --
 	if humanoid.MoveDirection.Magnitude > 0.1 then
 		humanoid:Move(humanoid.MoveDirection, false) 
 		return 
@@ -282,7 +282,7 @@ local function enOpcion1Click()
 		botonOpcion1.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 		conexionDeSeguimiento = RunService.Heartbeat:Connect(bucleDeSeguimiento)
 	else
-		botonOpcion1.Text = "Seguir Jugador"
+		botonOpcion1.Text = "Seguir Jugador (T/M3)"
 		botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 		if conexionDeSeguimiento then
 			conexionDeSeguimiento:Disconnect()
@@ -322,7 +322,6 @@ local function encontrarJugadorMasCercanoEnEquipoPlayer()
 	return objetivo
 end
 
---- Bucle de seguimiento de equipo (Híbrido + Control de Usuario) ---
 local function bucleDeSeguimientoEquipo()
 	local char = player.Character
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
@@ -337,7 +336,7 @@ local function bucleDeSeguimientoEquipo()
 
 	local objetivo = encontrarJugadorMasCercanoEnEquipoPlayer() 
 	if not objetivo or not objetivo:FindFirstChild("HumanoidRootPart") then
-		humanoid:MoveTo(rootPart.Position) -- Detenerse
+		humanoid:MoveTo(rootPart.Position) 
 		return
 	end
 	
@@ -493,22 +492,19 @@ local function enOpcion4Click()
 end
 -----------------------------------------------
 
---- Lógica de Resaltado de Aura (Opción 5) - VERSIÓN ROBUSTA POR BUCLE ---
+--- Lógica de Resaltado de Aura (Opción 5) - VERSIÓN ROBUSTA ---
 local resaltarActivo = false
 local conexionResaltar = nil
-local highlightObjects = {} -- Cache para no crear infinitos highlights
+local highlightObjects = {} 
 
 local function aplicarResaltadoAura(character)
 	if not character or not character:IsA("Model") then return end
-	
-	-- Evitar resaltar al propio jugador
 	if character == player.Character then return end
-
-	if highlightObjects[character] then return end -- Ya tiene resaltado
+	if highlightObjects[character] then return end 
 
 	local highlight = Instance.new("Highlight")
 	highlight.Name = "PlayerHighlight"
-	highlight.FillTransparency = 1 -- Solo borde
+	highlight.FillTransparency = 1 
 	highlight.OutlineTransparency = 0 
 	highlight.FillColor = Color3.fromRGB(255, 255, 255) 
 	highlight.OutlineColor = Color3.fromRGB(200, 200, 200)
@@ -519,16 +515,13 @@ local function aplicarResaltadoAura(character)
 end
 
 local function bucleDeResaltado()
-	-- 1. Resaltar a todos los jugadores vivos
 	for _, p in pairs(PlayersService:GetPlayers()) do
 		if p ~= player and p.Character then
 			aplicarResaltadoAura(p.Character)
 		end
 	end
-	
-	-- 2. Limpiar highlights de personajes que ya no existen
 	for char, highlight in pairs(highlightObjects) do
-		if not char.Parent then -- El personaje fue destruido
+		if not char.Parent then 
 			highlight:Destroy()
 			highlightObjects[char] = nil
 		end
@@ -540,8 +533,6 @@ local function enOpcion5Click()
 	if resaltarActivo then
 		botonOpcion5.Text = "Resaltar: ON"
 		botonOpcion5.BackgroundColor3 = Color3.fromRGB(60, 140, 70)
-		
-		-- Iniciar bucle lento (10 veces por segundo es suficiente)
 		local lastCheck = 0
 		conexionResaltar = RunService.Heartbeat:Connect(function()
 			local now = os.clock()
@@ -559,7 +550,6 @@ local function enOpcion5Click()
 			conexionResaltar = nil
 		end
 		
-		-- Limpiar todo
 		for char, highlight in pairs(highlightObjects) do
 			if highlight then highlight:Destroy() end
 		end
@@ -644,6 +634,23 @@ local function enOpcion7Click()
 	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcion7 = nil
 end
 
+--- FUNCIÓN DE ENTRADA (ATAJOS DE TECLADO/MOUSE) ---
+local function onInput(input, gameProcessed)
+	-- 1. Botones del Mouse (M3 activa Opción 3)
+	if input.UserInputType == Enum.UserInputType.MouseButton3 then
+		enOpcion3Click() -- Activar "Seguir (Player)"
+	end
+
+	-- 2. Teclas (T y R), respetando el chat
+	if not gameProcessed then
+		if input.KeyCode == Enum.KeyCode.T then
+			enOpcion1Click() -- Activar "Seguir Jugador"
+		elseif input.KeyCode == Enum.KeyCode.R then
+			enOpcion5Click() -- Activar "Resaltar"
+		end
+	end
+end
+
 --=================================================
 -- 4. CONECTAR TODOS LOS EVENTOS
 --=================================================
@@ -667,6 +674,7 @@ end))
 
 table.insert(conexionesActivas, UserInputService.InputChanged:Connect(reiniciarTemporizadorDePausa))
 table.insert(conexionesActivas, UserInputService.JumpRequest:Connect(onJumpRequest))
+table.insert(conexionesActivas, UserInputService.InputBegan:Connect(onInput)) -- Conectar atajos
 
 table.insert(conexionesActivas, tpButton.MouseButton1Click:Connect(onTpButtonClick))
 table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopButtonClick))
