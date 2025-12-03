@@ -7,20 +7,15 @@ local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Variables de estado
 local currentTrack = nil 
 local currentAnimId = nil 
 
--- VARIABLES TRANSPARENCIA
 local draggingSlider = false
 local currentTransparency = 0
 local lastAppliedTransparency = 0 
 local originalTransparencies = {} 
 local mapLoaded = false 
 
--- =================================================================
--- 1. TUS EMOTES
--- =================================================================
 local ID_TORNADO = 135373056067761
 local ID_SENTARSE = 71112973269174
 
@@ -29,7 +24,6 @@ local misEmotes = {
 	{Name = "Sentarse (F)", Id = ID_SENTARSE}
 }
 
--- Bloquear rueda original
 task.spawn(function()
 	for i = 1, 10 do 
 		pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.EmotesMenu, false) end)
@@ -37,9 +31,6 @@ task.spawn(function()
 	end
 end)
 
--- =================================================================
--- 2. ESCANEO DE MAPA (MEMORIA VISUAL)
--- =================================================================
 local function saveOriginalState(part)
 	if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then
 		if originalTransparencies[part] == nil then
@@ -57,9 +48,6 @@ task.spawn(function()
 	mapLoaded = true
 end)
 
--- =================================================================
--- 3. INTERFAZ GRÁFICA
--- =================================================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "System_Clean"
 screenGui.ResetOnSpawn = false
@@ -67,7 +55,6 @@ screenGui.DisplayOrder = 100
 screenGui.IgnoreGuiInset = true 
 screenGui.Parent = playerGui
 
--- CONTENEDOR PRINCIPAL
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "TopContainer"
 mainFrame.Size = UDim2.new(0, 110, 0, 32) 
@@ -75,7 +62,6 @@ mainFrame.Position = UDim2.new(0, 230, 0, 8)
 mainFrame.BackgroundTransparency = 1 
 mainFrame.Parent = screenGui
 
--- BOTÓN PRINCIPAL
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleBtn"
 toggleBtn.Text = "ACCIONES"
@@ -88,7 +74,6 @@ toggleBtn.TextSize = 12
 toggleBtn.Parent = mainFrame
 local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = toggleBtn
 
--- LISTA DESPLEGABLE
 local listFrame = Instance.new("Frame")
 listFrame.Name = "ListPanel"
 listFrame.Size = UDim2.new(1, 10, 0, 0) 
@@ -102,9 +87,6 @@ local listCorner = Instance.new("UICorner"); listCorner.CornerRadius = UDim.new(
 local layout = Instance.new("UIListLayout"); layout.Parent = listFrame; layout.HorizontalAlignment = Enum.HorizontalAlignment.Center; layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 4)
 local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 8); padding.PaddingBottom = UDim.new(0, 8); padding.Parent = listFrame
 
--- =================================================================
--- 4. INTERFAZ SLIDER
--- =================================================================
 local sliderBarBackground = Instance.new("Frame")
 sliderBarBackground.Name = "SliderBg"
 sliderBarBackground.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -149,9 +131,6 @@ valueLabel.TextSize = 16
 valueLabel.ZIndex = 20
 valueLabel.Parent = sliderBarBackground
 
--- =================================================================
--- 5. LÓGICA SLIDER & MAPA
--- =================================================================
 
 sliderKnob.MouseButton1Down:Connect(function() draggingSlider = true end)
 UserInputService.InputEnded:Connect(function(input)
@@ -188,9 +167,6 @@ local function applyTransparency()
 	end
 end
 
--- =================================================================
--- 6. LÓGICA EMOTES
--- =================================================================
 
 local function stopCurrent()
 	if currentTrack then
@@ -230,9 +206,6 @@ local function killScript()
 	script:Destroy()
 end
 
--- =================================================================
--- 7. BOTONES
--- =================================================================
 local function createButton(text, color, order, callback)
 	local btn = Instance.new("TextButton")
 	btn.Text = text
@@ -257,7 +230,7 @@ createButton("TRANSPARENCIA MAPA", Color3.fromRGB(120, 40, 200), 50, function()
 	sliderBarBackground.Visible = not sliderBarBackground.Visible
 end)
 
-createButton("💀 CERRAR TODO", Color3.fromRGB(200, 30, 30), 100, killScript)
+createButton("CERRAR TODO", Color3.fromRGB(200, 30, 30), 100, killScript)
 
 listFrame.Size = UDim2.new(1, 10, 0, (#misEmotes + 2) * 34 + 20)
 
@@ -266,9 +239,6 @@ toggleBtn.MouseButton1Click:Connect(function()
 	if listFrame.Visible then toggleBtn.Text = "CERRAR" else toggleBtn.Text = "ACCIONES" end
 end)
 
--- =================================================================
--- 8. INPUTS (TECLAS)
--- =================================================================
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
