@@ -10,10 +10,6 @@ local PathfindingService = game:GetService("PathfindingService")
 
 local conexionesActivas = {}
 
---=================================================
--- 1. CREAR LOS OBJETOS DE LA GUI
---=================================================
-
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MenuScripted"
 screenGui.ResetOnSpawn = false 
@@ -124,7 +120,6 @@ botonOpcion7.Text = "DETENER SCRIPT"
 botonOpcion7.Size = UDim2.new(0.9, 0, 0, 30)
 botonOpcion7.Position = UDim2.new(0.05, 0, 0, 250) 
 
---- Menú de Teleport ---
 local tpMenu = Instance.new("Frame")
 tpMenu.Name = "TeleportMenu"
 tpMenu.Parent = screenGui
@@ -172,10 +167,6 @@ tpLoopButton.Font = Enum.Font.SourceSansBold
 tpLoopButton.Size = UDim2.new(0.425, 0, 0, 40)
 tpLoopButton.Position = UDim2.new(0.525, 0, 0, 50)
 
---=================================================
--- 2. LÓGICA DEL MENÚ Y SEGUIMIENTO
---=================================================
-
 local menuEstaVisible = false
 local function onToggleClick()
 	menuEstaVisible = not menuEstaVisible
@@ -192,7 +183,6 @@ local estaSiguiendoEquipo = false
 local conexionDeSeguimiento = nil
 local conexionSeguimientoEquipo = nil
 
--- --- Lógica Opción 1 (Seguir a Todos) ---
 local function encontrarJugadorMasCercano()
 	local jugadorLocalChar = player.Character
 	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -221,7 +211,6 @@ local function bucleDeSeguimiento()
 	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not rootPart then return end
 	
-	-- CONTROL DE USUARIO --
 	if humanoid.MoveDirection.Magnitude > 0.1 then
 		humanoid:Move(humanoid.MoveDirection, false) 
 		return 
@@ -296,7 +285,6 @@ local function enOpcion1Click()
 	end
 end
 
--- --- Lógica Opción 3 (Seguir Equipo "Player") ---
 local function encontrarJugadorMasCercanoEnEquipoPlayer()
 	local jugadorLocalChar = player.Character
 	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
@@ -328,7 +316,6 @@ local function bucleDeSeguimientoEquipo()
 	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
 	if not humanoid or not rootPart then return end
 
-	-- CONTROL DE USUARIO --
 	if humanoid.MoveDirection.Magnitude > 0.1 then
 		humanoid:Move(humanoid.MoveDirection, false) 
 		return
@@ -402,9 +389,6 @@ local function enOpcion3Click()
 	end
 end
 
---=================================================
--- 3. OTRAS FUNCIONES
---=================================================
 
 local camera = workspace.CurrentCamera
 local conexionDeAutoapuntado = nil
@@ -413,7 +397,6 @@ local tiempoSinMoverse = 0
 local TIEMPO_ESPERA_AIM = 0.3 
 local airJumpActivo = false
 
--- (Lógica de Autoapuntado - Opción 2)
 local function bucleDeAutoapuntado(deltaTime)
 	if not camera then 
 		camera = workspace.CurrentCamera 
@@ -470,7 +453,6 @@ local function reiniciarTemporizadorDePausa(inputObject)
 	end
 end
 
--- --- Lógica de Salto en el Aire (Opción 4) ---
 local function onJumpRequest()
 	if not airJumpActivo then return end
 	local char = player.Character
@@ -490,9 +472,6 @@ local function enOpcion4Click()
 		botonOpcion4.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 	end
 end
------------------------------------------------
-
---- Lógica de Resaltado de Aura (Opción 5) - VERSIÓN ROBUSTA ---
 local resaltarActivo = false
 local conexionResaltar = nil
 local highlightObjects = {} 
@@ -557,7 +536,6 @@ local function enOpcion5Click()
 	end
 end
 
---- Lógica de Teleport (Opción 6) ---
 local tpLoopActive = false
 local conexionTpLoop = nil
 
@@ -605,7 +583,6 @@ local function enOpcion6Click()
 	if tpMenu then tpMenu.Visible = not tpMenu.Visible end
 end
 
---- Lógica Opción 7 (DETENER SCRIPT) ---
 local function enOpcion7Click()
 	detenerAutoapuntado()
 	
@@ -634,14 +611,12 @@ local function enOpcion7Click()
 	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcion7 = nil
 end
 
---- FUNCIÓN DE ENTRADA (ATAJOS DE TECLADO/MOUSE) ---
 local function onInput(input, gameProcessed)
 	-- 1. Botones del Mouse (M3 activa Opción 3)
 	if input.UserInputType == Enum.UserInputType.MouseButton3 then
 		enOpcion3Click() -- Activar "Seguir (Player)"
 	end
 
-	-- 2. Teclas (T y R), respetando el chat
 	if not gameProcessed then
 		if input.KeyCode == Enum.KeyCode.T then
 			enOpcion1Click() -- Activar "Seguir Jugador"
@@ -651,9 +626,6 @@ local function onInput(input, gameProcessed)
 	end
 end
 
---=================================================
--- 4. CONECTAR TODOS LOS EVENTOS
---=================================================
 
 table.insert(conexionesActivas, toggleButton.MouseButton1Click:Connect(onToggleClick))
 table.insert(conexionesActivas, botonOpcion1.MouseButton1Click:Connect(enOpcion1Click))
@@ -674,12 +646,11 @@ end))
 
 table.insert(conexionesActivas, UserInputService.InputChanged:Connect(reiniciarTemporizadorDePausa))
 table.insert(conexionesActivas, UserInputService.JumpRequest:Connect(onJumpRequest))
-table.insert(conexionesActivas, UserInputService.InputBegan:Connect(onInput)) -- Conectar atajos
+table.insert(conexionesActivas, UserInputService.InputBegan:Connect(onInput))
 
 table.insert(conexionesActivas, tpButton.MouseButton1Click:Connect(onTpButtonClick))
 table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopButtonClick))
 
--- Actualizar el filtro del Rayo si el personaje muere
 local function conectarEventosDePersonaje(character)
 	if raycastParams then
 		raycastParams.FilterDescendantsInstances = {character}
