@@ -16,16 +16,11 @@ local lastAppliedTransparency = 0
 local originalTransparencies = {} 
 local mapLoaded = false 
 
-local draggingHbSlider = false 
-local hitboxEnabled = false
-local minHitboxSize = 2   
-local maxHitboxSize = 200 
-local currentHitboxSize = minHitboxSize 
-local TargetList = {} 
+local targetPlayer = nil 
+local isTargeting = false 
 
 local ID_TORNADO = 135373056067761
 local ID_SENTARSE = 71112973269174
-
 local misEmotes = {
 	{Name = "Tornado (G)",  Id = ID_TORNADO},
 	{Name = "Sentarse (F)", Id = ID_SENTARSE}
@@ -56,7 +51,7 @@ task.spawn(function()
 end)
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "System_Final_Clean"
+screenGui.Name = "System_Final_Clean_Target"
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 100
 screenGui.IgnoreGuiInset = true 
@@ -94,8 +89,32 @@ local listCorner = Instance.new("UICorner"); listCorner.CornerRadius = UDim.new(
 local layout = Instance.new("UIListLayout"); layout.Parent = listFrame; layout.HorizontalAlignment = Enum.HorizontalAlignment.Center; layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 4)
 local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 8); padding.PaddingBottom = UDim.new(0, 8); padding.Parent = listFrame
 
+local targetFrame = Instance.new("Frame")
+targetFrame.Name = "TargetInputFrame"
+targetFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+targetFrame.BorderSizePixel = 0
+targetFrame.Position = UDim2.new(0.5, -100, 0.85, 0) 
+targetFrame.Size = UDim2.new(0, 200, 0, 35)
+targetFrame.Visible = false 
+targetFrame.ZIndex = 20
+targetFrame.Parent = screenGui
+local tBgC = Instance.new("UICorner"); tBgC.CornerRadius = UDim.new(0, 6); tBgC.Parent = targetFrame
+
+local targetBox = Instance.new("TextBox")
+targetBox.Name = "TargetBox"
+targetBox.Size = UDim2.new(1, -10, 1, 0)
+targetBox.Position = UDim2.new(0, 5, 0, 0)
+targetBox.BackgroundTransparency = 1
+targetBox.TextColor3 = Color3.new(1, 1, 1)
+targetBox.PlaceholderText = "Escribe nombre parcial..."
+targetBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+targetBox.Font = Enum.Font.Gotham
+targetBox.TextSize = 14
+targetBox.Text = ""
+targetBox.ZIndex = 21
+targetBox.Parent = targetFrame
+
 local sliderBarBackground = Instance.new("Frame")
-sliderBarBackground.Name = "TranspSlider"
 sliderBarBackground.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 sliderBarBackground.BackgroundTransparency = 0.2
 sliderBarBackground.BorderSizePixel = 0
@@ -135,64 +154,43 @@ valueLabel.TextSize = 16
 valueLabel.ZIndex = 20
 valueLabel.Parent = sliderBarBackground
 
-local hbSliderBg = Instance.new("Frame")
-hbSliderBg.Name = "HitboxSlider"
-hbSliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-hbSliderBg.BackgroundTransparency = 0.2
-hbSliderBg.BorderSizePixel = 0
-hbSliderBg.Position = UDim2.new(0.5, -150, 0.82, -20) 
-hbSliderBg.Size = UDim2.new(0, 300, 0, 12)
-hbSliderBg.Visible = false 
-hbSliderBg.ZIndex = 20
-hbSliderBg.Parent = screenGui
-local hbBgC = Instance.new("UICorner"); hbBgC.CornerRadius = UDim.new(1, 0); hbBgC.Parent = hbSliderBg
+local function findTarget(text)
+	text = text:lower()
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= player then
+			if p.Name:lower():sub(1, #text) == text or p.DisplayName:lower():sub(1, #text) == text then
+				return p
+			end
+		end
+	end
+	return nil
+end
 
-local hbSliderFill = Instance.new("Frame")
-hbSliderFill.BackgroundColor3 = Color3.fromRGB(0, 200, 255) 
-hbSliderFill.BorderSizePixel = 0
-hbSliderFill.Size = UDim2.new(0, 0, 1, 0) 
-hbSliderFill.ZIndex = 21
-hbSliderFill.Parent = hbSliderBg
-local hbFilC = Instance.new("UICorner"); hbFilC.CornerRadius = UDim.new(1, 0); hbFilC.Parent = hbSliderFill
-
-local hbKnob = Instance.new("ImageButton")
-hbKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-hbKnob.BorderSizePixel = 0
-hbKnob.Position = UDim2.new(0, -10, 0.5, -10)
-hbKnob.Size = UDim2.new(0, 20, 0, 20)
-hbKnob.ZIndex = 22
-hbKnob.Parent = hbSliderBg
-local hbKC = Instance.new("UICorner"); hbKC.CornerRadius = UDim.new(1, 0); hbKC.Parent = hbKnob
-
-local hbLabel = Instance.new("TextLabel")
-hbLabel.BackgroundTransparency = 1
-hbLabel.Position = UDim2.new(0.5, 0, -2.5, 0)
-hbLabel.Size = UDim2.new(1, 0, 1, 0)
-hbLabel.Font = Enum.Font.GothamBold
-hbLabel.Text = "Tamaño Hitbox: " .. minHitboxSize
-hbLabel.TextColor3 = Color3.new(0.6, 1, 1)
-hbLabel.TextStrokeTransparency = 0.5
-hbLabel.TextSize = 16
-hbLabel.ZIndex = 20
-hbLabel.Parent = hbSliderBg
-
-sliderKnob.MouseButton1Down:Connect(function() draggingSlider = true end)
-hbKnob.MouseButton1Down:Connect(function() draggingHbSlider = true end)
-
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-		draggingSlider = false 
-		draggingHbSlider = false
+targetBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed then
+		local found = findTarget(targetBox.Text)
+		if found then
+			targetPlayer = found
+			isTargeting = true
+			targetBox.Text = "Objetivo: " .. found.Name
+			targetBox.TextColor3 = Color3.fromRGB(0, 255, 0) 
+		else
+			targetPlayer = nil
+			isTargeting = false
+			targetBox.Text = "No encontrado"
+			targetBox.TextColor3 = Color3.fromRGB(255, 0, 0) 
+			wait(1)
+			targetBox.Text = ""
+			targetBox.TextColor3 = Color3.new(1,1,1)
+		end
 	end
 end)
 
-local function updateSliders()
-	local mouseX = mouse.X
-	
+RunService.RenderStepped:Connect(function()
 	if draggingSlider then
 		local barPos = sliderBarBackground.AbsolutePosition
 		local barSize = sliderBarBackground.AbsoluteSize
-		local relativeX = math.clamp(mouseX - barPos.X, 0, barSize.X)
+		local relativeX = math.clamp(mouse.X - barPos.X, 0, barSize.X)
 		local percentage = relativeX / barSize.X
 		sliderKnob.Position = UDim2.new(percentage, -10, 0.5, -10)
 		sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
@@ -200,102 +198,75 @@ local function updateSliders()
 		valueLabel.Text = "Transparencia Mapa: " .. math.floor(percentage * 100) .. "%"
 	end
 	
-	if draggingHbSlider then
-		local barPos = hbSliderBg.AbsolutePosition
-		local barSize = hbSliderBg.AbsoluteSize
-		local relativeX = math.clamp(mouseX - barPos.X, 0, barSize.X)
-		local percentage = relativeX / barSize.X
-		local newSize = minHitboxSize + ((maxHitboxSize - minHitboxSize) * percentage)
-		currentHitboxSize = newSize
-		hbKnob.Position = UDim2.new(percentage, -10, 0.5, -10)
-		hbSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-		hbLabel.Text = "Tamaño Hitbox: " .. math.floor(newSize)
-	end
-end
-
-local function applyTransparency()
-	if not mapLoaded then return end
-	if math.abs(currentTransparency - lastAppliedTransparency) < 0.01 then return end
-	lastAppliedTransparency = currentTransparency
-	for part, originalTransparency in pairs(originalTransparencies) do
-		if part and part.Parent then 
-			if player.Character and part:IsDescendantOf(player.Character) then continue end
-			local newTransparency = math.max(originalTransparency, currentTransparency)
-			part.Transparency = newTransparency
-		else
-			originalTransparencies[part] = nil
-		end
-	end
-end
-
-task.spawn(function()
-	while true do
-		if hitboxEnabled then
-			local newTargets = {}
-			for _, p in ipairs(Players:GetPlayers()) do
-				if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-					table.insert(newTargets, p.Character.HumanoidRootPart)
+	if mapLoaded and math.abs(currentTransparency - lastAppliedTransparency) > 0.01 then
+		lastAppliedTransparency = currentTransparency
+		for part, original in pairs(originalTransparencies) do
+			if part and part.Parent then
+				if not (player.Character and part:IsDescendantOf(player.Character)) then
+					part.Transparency = math.max(original, currentTransparency)
 				end
+			else
+				originalTransparencies[part] = nil
 			end
-			TargetList = newTargets
-		end
-		task.wait(1)
-	end
-end)
-
-local function resetHitboxes()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = p.Character.HumanoidRootPart
-			hrp.Size = Vector3.new(2, 2, 1) 
-			hrp.Transparency = 1 
-			hrp.BrickColor = BrickColor.new("Medium stone grey")
-			hrp.Material = Enum.Material.Plastic 
-			hrp.CanCollide = true
-			hrp.Massless = false
-			local sb = hrp:FindFirstChild("HitboxVisualizer")
-			if sb then sb:Destroy() end
 		end
 	end
 	
-	currentHitboxSize = minHitboxSize
-	hbSliderBg.Visible = false
-	hbKnob.Position = UDim2.new(0, -10, 0.5, -10)
-	hbSliderFill.Size = UDim2.new(0, 0, 1, 0)
-	hbLabel.Text = "Tamaño Hitbox: " .. minHitboxSize
-end
+	if isTargeting and targetPlayer and targetPlayer.Character then
+		local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		local myChar = player.Character
+		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+		
+		if root and myRoot then
+			root.Size = Vector3.new(5, 5, 5)
+			root.Transparency = 0.5
+			root.CanCollide = false
+			root.Massless = true
+			
+			local box = root:FindFirstChild("TargetVis")
+			if not box then
+				box = Instance.new("SelectionBox")
+				box.Name = "TargetVis"
+				box.Adornee = root
+				box.Parent = root
+				box.Color3 = Color3.fromRGB(255, 0, 0) 
+			end
+			
+			root.CFrame = myRoot.CFrame * CFrame.new(0, 0, -3) 
+			root.Velocity = Vector3.new(0,0,0)
+			root.RotVelocity = Vector3.new(0,0,0)
+		end
+	elseif targetPlayer == nil and isTargeting == true then
+		isTargeting = false
+		targetBox.Text = "Jugador salió"
+	end
+end)
 
 local function stopCurrent()
-	if currentTrack then
-		currentTrack:Stop()
-		currentTrack = nil
-	end
+	if currentTrack then currentTrack:Stop(); currentTrack = nil end
 end
 
 local function toggleAnim(animId)
 	stopCurrent()
-	if currentAnimId == animId then
-		currentAnimId = nil
-		return 
-	end
+	if currentAnimId == animId then currentAnimId = nil; return end
 	currentAnimId = animId
-	local char = player.Character
-	if not char then return end
-	local hum = char:FindFirstChild("Humanoid")
-	if not hum then return end
+	local char = player.Character; if not char then return end
+	local hum = char:FindFirstChild("Humanoid"); if not hum then return end
 	local animator = hum:FindFirstChild("Animator") or Instance.new("Animator", hum)
-	local animation = Instance.new("Animation")
-	animation.AnimationId = "rbxassetid://" .. tostring(animId)
-	local success, track = pcall(function() return animator:LoadAnimation(animation) end)
-	if success and track then
-		currentTrack = track; track.Priority = Enum.AnimationPriority.Action; track.Looped = true; track:Play()
-	end
+	local animation = Instance.new("Animation"); animation.AnimationId = "rbxassetid://"..tostring(animId)
+	local s, t = pcall(function() return animator:LoadAnimation(animation) end)
+	if s and t then currentTrack = t; t.Priority = Enum.AnimationPriority.Action; t.Looped = true; t:Play() end
 end
 
 local function killScript()
 	stopCurrent()
-	hitboxEnabled = false
-	resetHitboxes() 
+	if targetPlayer and targetPlayer.Character then
+		local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.Transparency = 1
+			root.Size = Vector3.new(2,2,1)
+			if root:FindFirstChild("TargetVis") then root.TargetVis:Destroy() end
+		end
+	end
 	if mapLoaded then
 		for part, original in pairs(originalTransparencies) do
 			if part and part.Parent then part.Transparency = original end
@@ -330,24 +301,24 @@ createButton("TRANSPARENCIA MAPA", Color3.fromRGB(120, 40, 200), 50, function()
 	sliderBarBackground.Visible = not sliderBarBackground.Visible
 end)
 
-local hitboxBtn = createButton("HITBOX (OFF)", Color3.fromRGB(0, 180, 200), 60, function()
-	if not hitboxEnabled then
-		hitboxEnabled = true
-		TargetList = {} 
-		hbSliderBg.Visible = true
+local targetBtn = createButton("TARGET HITBOX", Color3.fromRGB(255, 100, 0), 60, function()
+	targetFrame.Visible = not targetFrame.Visible
+	if not targetFrame.Visible then
+		isTargeting = false
+		targetPlayer = nil
+		targetBox.Text = ""
 	else
-		hitboxEnabled = false
-		resetHitboxes() 
+		targetBox:CaptureFocus()
 	end
 end)
 
 RunService.RenderStepped:Connect(function()
-	if hitboxEnabled then
-		hitboxBtn.Text = "HITBOX (ON)"
-		hitboxBtn.BackgroundColor3 = Color3.fromRGB(0, 220, 150)
+	if isTargeting then
+		targetBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0) 
+		targetBtn.Text = "ATACANDO: " .. (targetPlayer and targetPlayer.Name or "...")
 	else
-		hitboxBtn.Text = "HITBOX (OFF)"
-		hitboxBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 200) 
+		targetBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0) 
+		targetBtn.Text = "TARGET HITBOX"
 	end
 end)
 
@@ -360,53 +331,26 @@ toggleBtn.MouseButton1Click:Connect(function()
 	if listFrame.Visible then toggleBtn.Text = "CERRAR" else toggleBtn.Text = "ACCIONES" end
 end)
 
+sliderKnob.MouseButton1Down:Connect(function() draggingSlider = true end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingSlider = false end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
-	if input.KeyCode == Enum.KeyCode.X then
-		sliderBarBackground.Visible = not sliderBarBackground.Visible
-	end
-	if input.KeyCode == Enum.KeyCode.C then
-		if not hitboxEnabled then
-			hitboxEnabled = true
-			TargetList = {}
-			hbSliderBg.Visible = true
-		else
-			hitboxEnabled = false
-			resetHitboxes()
-		end
-	end
+	if input.KeyCode == Enum.KeyCode.X then sliderBarBackground.Visible = not sliderBarBackground.Visible end
 	if input.KeyCode == Enum.KeyCode.F then toggleAnim(ID_SENTARSE) 
 	elseif input.KeyCode == Enum.KeyCode.G then toggleAnim(ID_TORNADO) 
 	end
-end)
-
-RunService.RenderStepped:Connect(function()
-	updateSliders()
-	applyTransparency()
 	
-	if hitboxEnabled then
-		for _, rootPart in pairs(TargetList) do
-			if rootPart and rootPart.Parent then 
-				rootPart.Size = Vector3.new(currentHitboxSize, currentHitboxSize, currentHitboxSize)
-				rootPart.Transparency = 0.5 
-				rootPart.BrickColor = BrickColor.new("Really blue")
-				rootPart.Material = Enum.Material.Plastic 
-				rootPart.CanCollide = false 
-				rootPart.CanTouch = true    
-				rootPart.CanQuery = true    
-				rootPart.Massless = true    
-				
-				local box = rootPart:FindFirstChild("HitboxVisualizer")
-				if not box then
-					box = Instance.new("SelectionBox")
-					box.Name = "HitboxVisualizer"
-					box.Adornee = rootPart
-					box.Parent = rootPart
-				end
-				box.Color3 = Color3.fromRGB(0, 170, 255)
-				box.LineThickness = 0.05
-				box.SurfaceTransparency = 1 
-			end
+	if input.KeyCode == Enum.KeyCode.C then
+		targetFrame.Visible = not targetFrame.Visible
+		if not targetFrame.Visible then
+			isTargeting = false
+			targetPlayer = nil
+			targetBox.Text = ""
+		else
+			targetBox:CaptureFocus()
 		end
 	end
 end)
