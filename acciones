@@ -28,10 +28,10 @@ local HIGHLIGHT_NAME = "ESP_Highlight"
 local TEXT_TAG_NAME = "ESP_TextTag"
 
 -- ==========================================
--- VARIABLES FALSO NPC (NUEVO)
+-- VARIABLES FALSO NPC
 -- ==========================================
 local fakeNpcEnabled = false
-local npcData = {} -- {model, tag, isConfirmed, lastRot}
+local npcData = {} 
 local lastNpcScan = 0
 local lastNpcUpdate = 0
 local NPC_MAX_WALKSPEED = 16.8
@@ -44,13 +44,17 @@ local ID_SENTARSE = 71112973269174
 local ID_BERRINCHE = 86339673982616
 local ID_CUTE = 98695071641289
 local ID_INVISIBLE = 113994067684875
+local ID_FLOTANDO = 112389019631009
+local ID_ESQUIAR = 76573949416065 -- NUEVO ID AGREGADO
 
 local misEmotes = {
 	{Name = "Tornado (G)",  Id = ID_TORNADO},
 	{Name = "Sentarse (F)", Id = ID_SENTARSE},
 	{Name = "Berrinche (H)", Id = ID_BERRINCHE},
 	{Name = "Cute (J)",      Id = ID_CUTE},
-	{Name = "Invisible (K)", Id = ID_INVISIBLE}
+	{Name = "Invisible (K)", Id = ID_INVISIBLE},
+	{Name = "Flotando (L)",  Id = ID_FLOTANDO},
+	{Name = "Esquiar (M)",   Id = ID_ESQUIAR} -- NUEVO BOTÓN AGREGADO
 }
 
 -- Ocultar menú nativo
@@ -87,7 +91,6 @@ screenGui.DisplayOrder = 100
 screenGui.IgnoreGuiInset = true 
 screenGui.Parent = playerGui
 
--- Carpeta local para etiquetas de NPCs (Protección anti-parpadeo)
 local npcTagsFolder = Instance.new("Folder", screenGui)
 npcTagsFolder.Name = "NPCTags_Container"
 
@@ -191,7 +194,7 @@ valueLabel.ZIndex = 20
 valueLabel.Parent = sliderBarBackground
 
 -- ==========================================
--- FUNCIONES LOGICA FALSO NPC (INTEGRACIÓN)
+-- FUNCIONES LOGICA FALSO NPC
 -- ==========================================
 
 local function createNpcTag(target)
@@ -201,16 +204,8 @@ local function createNpcTag(target)
 	bGui.AlwaysOnTop = true
 	bGui.Adornee = target
 	bGui.Enabled = false 
-	
 	local tl = Instance.new("TextLabel", bGui)
-	tl.Size = UDim2.new(1, 0, 1, 0)
-	tl.BackgroundTransparency = 1
-	tl.TextScaled = true
-	tl.Font = Enum.Font.GothamBold
-	tl.Text = "" 
-	tl.TextColor3 = Color3.new(1, 0, 0) 
-	tl.TextStrokeTransparency = 0
-	
+	tl.Size = UDim2.new(1, 0, 1, 0); tl.BackgroundTransparency = 1; tl.TextScaled = true; tl.Font = Enum.Font.GothamBold; tl.Text = ""; tl.TextColor3 = Color3.new(1, 0, 0); tl.TextStrokeTransparency = 0
 	return bGui
 end
 
@@ -219,12 +214,7 @@ local function scanNPCs()
 		if v:IsA("Model") and v:FindFirstChild("Task") then
 			if not npcData[v] then
 				local head = v:FindFirstChild("Head") or v:FindFirstChildWhichIsA("BasePart")
-				if head then
-					npcData[v] = {
-						tag = createNpcTag(head),
-						isConfirmed = false
-					}
-				end
+				if head then npcData[v] = {tag = createNpcTag(head), isConfirmed = false} end
 			end
 		end
 	end
@@ -234,50 +224,30 @@ local function checkNpcViolations(model, data)
 	local hrp = model:FindFirstChild("HumanoidRootPart")
 	local hum = model:FindFirstChild("Humanoid")
 	if not hrp or not hum or data.isConfirmed then return end
-
-	-- 1. Salto o Caída brusca
 	local state = hum:GetState()
-	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then
-		if hrp.Velocity.Y > 5 then data.isConfirmed = true end
-	end
-
-	-- 2. Velocidad de Carrera
+	if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then if hrp.Velocity.Y > 5 then data.isConfirmed = true end end
 	local horizontalSpeed = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z).Magnitude
 	if horizontalSpeed > NPC_MAX_WALKSPEED then data.isConfirmed = true end
-
-	-- 3. Movimiento Lateral (Strafing)
 	local moveDir = hum.MoveDirection
 	if moveDir.Magnitude > 0 then
 		local dot = math.abs(moveDir:Dot(hrp.CFrame.RightVector))
 		if dot > 0.85 then data.isConfirmed = true end
 	end
-
-	if data.isConfirmed then
-		data.tag.Enabled = fakeNpcEnabled
-		data.tag.TextLabel.Text = "⚠️ JUGADOR ⚠️"
-	end
+	if data.isConfirmed then data.tag.Enabled = fakeNpcEnabled; data.tag.TextLabel.Text = "⚠️ JUGADOR ⚠️" end
 end
 
 local function removeNpcVisuals()
-	for _, data in pairs(npcData) do
-		if data.tag then data.tag:Destroy() end
-	end
+	for _, data in pairs(npcData) do if data.tag then data.tag:Destroy() end end
 	npcData = {}
 end
 
--- ==========================================
--- FIN LOGICA FALSO NPC
--- ==========================================
-
--- FUNCIONES DE LÓGICA GENERAL
+-- --- LÓGICA GENERAL ---
 local function findTarget(text)
 	text = text:lower()
 	if text:gsub(" ", "") == "" then return nil end
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= player then
-			if #text > 0 and (p.Name:lower():sub(1, #text) == text or p.DisplayName:lower():sub(1, #text) == text) then
-				return p
-			end
+			if #text > 0 and (p.Name:lower():sub(1, #text) == text or p.DisplayName:lower():sub(1, #text) == text) then return p end
 		end
 	end
 	return nil
@@ -286,131 +256,47 @@ end
 local function restorePlayerPhysics(p)
 	if p and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
 		local root = p.Character.HumanoidRootPart
-		root.CanCollide = true
-		root.Massless = false
-		root.Transparency = 1
-		root.Size = Vector3.new(2, 2, 1)
+		root.CanCollide = true; root.Massless = false; root.Transparency = 1; root.Size = Vector3.new(2, 2, 1)
 		if root:FindFirstChild("TargetVis") then root.TargetVis:Destroy() end
 		if root:FindFirstChild("BringAllVis") then root.BringAllVis:Destroy() end
 	end
 end
 
-local function restoreAllPhysics()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player then restorePlayerPhysics(p) end
-	end
-end
-
--- LOGICA ESCANEO ITEMS (Integración de colores)
-local function getColorFromName(name)
-	local sum = 0
-	for i = 1, #name do sum = sum + string.byte(name, i) end
-	return Color3.fromHSV((sum % 255) / 255, 1, 1)
-end
-
-local function clearItemVisuals(character)
-	if character:FindFirstChild(HIGHLIGHT_NAME) then character[HIGHLIGHT_NAME]:Destroy() end
-	local head = character:FindFirstChild("Head")
-	if head and head:FindFirstChild(TEXT_TAG_NAME) then head[TEXT_TAG_NAME]:Destroy() end
-end
+local function restoreAllPhysics() for _, p in ipairs(Players:GetPlayers()) do if p ~= player then restorePlayerPhysics(p) end end end
 
 local function removeAllItemVisuals()
 	for _, p in ipairs(Players:GetPlayers()) do
-		if p.Character then clearItemVisuals(p.Character) end
-	end
-end
-
-local function updateItemVisuals(character, color, textContent)
-	local highlight = character:FindFirstChild(HIGHLIGHT_NAME)
-	if not highlight then
-		highlight = Instance.new("Highlight", character)
-		highlight.Name = HIGHLIGHT_NAME
-		highlight.FillTransparency = 1
-		highlight.OutlineTransparency = 0
-		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	end
-	highlight.OutlineColor = color
-
-	local head = character:FindFirstChild("Head")
-	if head then
-		local bg = head:FindFirstChild(TEXT_TAG_NAME)
-		if not bg then
-			bg = Instance.new("BillboardGui", head)
-			bg.Name = TEXT_TAG_NAME
-			bg.Size = UDim2.new(0, 200, 0, 50)
-			bg.StudsOffset = Vector3.new(0, 3.5, 0)
-			bg.AlwaysOnTop = true
-			local txt = Instance.new("TextLabel", bg)
-			txt.Size = UDim2.new(1, 0, 1, 0); txt.BackgroundTransparency = 1
-			txt.TextStrokeTransparency = 0; txt.Font = Enum.Font.GothamBold; txt.TextSize = 15
-		end
-		bg.TextLabel.Text = textContent
-		bg.TextLabel.TextColor3 = color
-	end
-end
-
-local function checkInventories()
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
-			local toolCount = 0
-			local toolName = nil
-			local backpack = p:FindFirstChild("Backpack")
-			if backpack then
-				for _, item in ipairs(backpack:GetChildren()) do
-					if item:IsA("Tool") then toolCount = toolCount + 1; if not toolName then toolName = item.Name end end
-				end
-			end
-			local equipped = p.Character:FindFirstChildWhichIsA("Tool")
-			if equipped then toolCount = toolCount + 1; toolName = equipped.Name end
-			
-			if toolCount > 0 then
-				local color = toolCount > 2 and Color3.new(1,1,1) or getColorFromName(toolName)
-				local text = toolName .. (toolCount > 1 and " (+"..(toolCount-1)..")" or "")
-				updateItemVisuals(p.Character, color, text)
-			else
-				clearItemVisuals(p.Character)
-			end
+		if p.Character then 
+			if p.Character:FindFirstChild(HIGHLIGHT_NAME) then p.Character[HIGHLIGHT_NAME]:Destroy() end
+			local h = p.Character:FindFirstChild("Head")
+			if h and h:FindFirstChild(TEXT_TAG_NAME) then h[TEXT_TAG_NAME]:Destroy() end
 		end
 	end
 end
 
--- BUCLE PRINCIPAL (RenderStepped)
+-- BUCLE RenderStepped
 RunService.RenderStepped:Connect(function()
 	local now = tick()
-	
-	-- Slider Transparencia
 	if draggingSlider then
 		local percentage = math.clamp((mouse.X - sliderBarBackground.AbsolutePosition.X) / sliderBarBackground.AbsoluteSize.X, 0, 1)
-		sliderKnob.Position = UDim2.new(percentage, -10, 0.5, -10)
-		sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-		currentTransparency = percentage
-		valueLabel.Text = "Transparencia Mapa: " .. math.floor(percentage * 100) .. "%"
+		sliderKnob.Position = UDim2.new(percentage, -10, 0.5, -10); sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+		currentTransparency = percentage; valueLabel.Text = "Transparencia Mapa: " .. math.floor(percentage * 100) .. "%"
 	end
-	
 	if mapLoaded and math.abs(currentTransparency - lastAppliedTransparency) > 0.01 then
 		lastAppliedTransparency = currentTransparency
 		for part, original in pairs(originalTransparencies) do
-			if part and part.Parent and not (player.Character and part:IsDescendantOf(player.Character)) then
-				part.Transparency = math.max(original, currentTransparency)
-			end
+			if part and part.Parent and not (player.Character and part:IsDescendantOf(player.Character)) then part.Transparency = math.max(original, currentTransparency) end
 		end
 	end
-	
-	-- Lógica Target
 	if isTargeting and targetPlayer and targetPlayer.Character then
 		local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
 		local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if root and myRoot then
 			root.Size = Vector3.new(5, 5, 5); root.Transparency = 0.5; root.CanCollide = false; root.Massless = true
-			if not root:FindFirstChild("TargetVis") then
-				local box = Instance.new("SelectionBox", root); box.Name = "TargetVis"; box.Adornee = root; box.Color3 = Color3.fromRGB(255,0,0)
-			end
-			root.CFrame = myRoot.CFrame * CFrame.new(0, 0, -3)
-			root.Velocity, root.RotVelocity = Vector3.new(), Vector3.new()
+			if not root:FindFirstChild("TargetVis") then local b = Instance.new("SelectionBox", root); b.Name = "TargetVis"; b.Adornee = root; b.Color3 = Color3.fromRGB(255,0,0) end
+			root.CFrame = myRoot.CFrame * CFrame.new(0, 0, -3); root.Velocity, root.RotVelocity = Vector3.new(), Vector3.new()
 		end
 	end
-
-	-- Lógica Bring All
 	if bringAllEnabled then
 		local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 		if myRoot then
@@ -418,45 +304,28 @@ RunService.RenderStepped:Connect(function()
 				if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
 					local root = p.Character.HumanoidRootPart
 					root.Size = Vector3.new(5,5,5); root.Transparency = 0.5; root.CanCollide = false; root.Massless = true
-					if not root:FindFirstChild("BringAllVis") then
-						local box = Instance.new("SelectionBox", root); box.Name = "BringAllVis"; box.Adornee = root; box.Color3 = Color3.fromRGB(170,0,255)
-					end
+					if not root:FindFirstChild("BringAllVis") then local b = Instance.new("SelectionBox", root); b.Name = "BringAllVis"; b.Adornee = root; b.Color3 = Color3.fromRGB(170,0,255) end
 					root.CFrame = myRoot.CFrame * CFrame.new(0,0,-4); root.Velocity, root.RotVelocity = Vector3.new(), Vector3.new()
 				end
 			end
 		end
 	end
-	
-	if itemScanEnabled then checkInventories() end
-
-	-- ==========================================
-	-- INTEGRACIÓN BUCLE FALSO NPC
-	-- ==========================================
 	if fakeNpcEnabled then
 		if now - lastNpcScan > 2 then scanNPCs(); lastNpcScan = now end
 		if now - lastNpcUpdate > NPC_UPDATE_FREQ then
-			local myChar = player.Character
-			local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 			for model, data in pairs(npcData) do
-				if model.Parent and myHrp then
-					local dist = (model.HumanoidRootPart.Position - myHrp.Position).Magnitude
-					data.tag.Enabled = showLabels and data.isConfirmed and (dist < MAX_DISTANCE)
-					checkNpcViolations(model, data)
-				elseif not model.Parent then
-					data.tag:Destroy(); npcData[model] = nil
-				end
+				if model.Parent then checkNpcViolations(model, data) else data.tag:Destroy(); npcData[model] = nil end
 			end
 			lastNpcUpdate = now
 		end
 	end
 end)
 
--- ACCIONES DE BOTONES
 local function toggleAnim(animId)
 	if currentTrack then currentTrack:Stop(); currentTrack = nil end
 	if currentAnimId == animId then currentAnimId = nil; return end
 	currentAnimId = animId
-	local char = player.Character; local hum = char and char:FindFirstChild("Humanoid")
+	local hum = player.Character and player.Character:FindFirstChild("Humanoid")
 	if hum then
 		local animator = hum:FindFirstChild("Animator") or Instance.new("Animator", hum)
 		local animation = Instance.new("Animation"); animation.AnimationId = "rbxassetid://"..tostring(animId)
@@ -477,71 +346,39 @@ local function createButton(text, color, order, callback)
 	local btn = Instance.new("TextButton", listFrame)
 	btn.Text = text; btn.Size = UDim2.new(0.95, 0, 0, 30); btn.BackgroundColor3 = color; btn.BackgroundTransparency = 0.3
 	btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 11; btn.LayoutOrder = order; btn.ZIndex = 11
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-	btn.MouseButton1Click:Connect(callback)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6); btn.MouseButton1Click:Connect(callback)
 	return btn
 end
 
-for i, data in ipairs(misEmotes) do
-	createButton(data.Name, Color3.fromRGB(60, 60, 70), i, function() toggleAnim(data.Id) end)
-end
+for i, data in ipairs(misEmotes) do createButton(data.Name, Color3.fromRGB(60, 60, 70), i, function() toggleAnim(data.Id) end) end
 
 createButton("TRANSPARENCIA MAPA", Color3.fromRGB(120, 40, 200), 50, function() sliderBarBackground.Visible = not sliderBarBackground.Visible end)
-
-local itemScanBtn = createButton("ESCANEO ITEMS (OFF)", Color3.fromRGB(0, 150, 200), 55, function()
-	itemScanEnabled = not itemScanEnabled; if not itemScanEnabled then removeAllItemVisuals() end
-end)
-
--- --- BOTÓN NUEVO: FALSO NPC ---
-local fakeNpcBtn = createButton("FALSO NPC (OFF)", Color3.fromRGB(80, 80, 80), 58, function()
-	fakeNpcEnabled = not fakeNpcEnabled
-	showLabels = fakeNpcEnabled -- Sincronizamos con el estado global de etiquetas
-	if not fakeNpcEnabled then removeNpcVisuals() end
-end)
--- ------------------------------
-
-local dbTarget = false
-local targetBtn = createButton("TARGET HITBOX", Color3.fromRGB(255, 100, 0), 60, function()
-	if bringAllEnabled or dbTarget then return end
-	dbTarget = true; targetFrame.Visible = not targetFrame.Visible
-	if not targetFrame.Visible then isTargeting, targetPlayer, targetBox.Text = false, nil, ""; restoreAllPhysics() else targetBox:CaptureFocus() end
-	task.wait(0.5); dbTarget = false
-end)
-
-local bringAllBtn = createButton("BRING ALL (OFF)", Color3.fromRGB(160, 32, 240), 65, function()
-	bringAllEnabled = not bringAllEnabled; if bringAllEnabled then isTargeting, targetFrame.Visible = false, false else restoreAllPhysics() end
-end)
-
+local itemScanBtn = createButton("ESCANEO ITEMS (OFF)", Color3.fromRGB(0, 150, 200), 55, function() itemScanEnabled = not itemScanEnabled; if not itemScanEnabled then removeAllItemVisuals() end end)
+local fakeNpcBtn = createButton("FALSO NPC (OFF)", Color3.fromRGB(80, 80, 80), 58, function() fakeNpcEnabled = not fakeNpcEnabled; if not fakeNpcEnabled then removeNpcVisuals() end end)
+local targetBtn = createButton("TARGET HITBOX", Color3.fromRGB(255, 100, 0), 60, function() targetFrame.Visible = not targetFrame.Visible; if not targetFrame.Visible then isTargeting, targetPlayer, targetBox.Text = false, nil, ""; restoreAllPhysics() else targetBox:CaptureFocus() end end)
+local bringAllBtn = createButton("BRING ALL (OFF)", Color3.fromRGB(160, 32, 240), 65, function() bringAllEnabled = not bringAllEnabled; if bringAllEnabled then isTargeting, targetFrame.Visible = false, false else restoreAllPhysics() end end)
 createButton("💀 CERRAR TODO", Color3.fromRGB(200, 30, 30), 100, killScript)
 
--- Actualización visual de botones
 RunService.RenderStepped:Connect(function()
-	itemScanBtn.Text = itemScanEnabled and "ESCANEO ITEMS (ON)" or "ESCANEO ITEMS (OFF)"
-	itemScanBtn.BackgroundColor3 = itemScanEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(0, 150, 200)
-
-	fakeNpcBtn.Text = fakeNpcEnabled and "FALSO NPC (ON)" or "FALSO NPC (OFF)"
-	fakeNpcBtn.BackgroundColor3 = fakeNpcEnabled and Color3.fromRGB(255, 150, 0) or Color3.fromRGB(80, 80, 80)
-
-	if isTargeting then targetBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0); targetBtn.Text = "ATACANDO: " .. (targetPlayer and targetPlayer.Name or "...")
-	else targetBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0); targetBtn.Text = "TARGET HITBOX" end
-	
-	bringAllBtn.BackgroundColor3 = bringAllEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(160, 32, 240)
-	bringAllBtn.Text = bringAllEnabled and "BRING ALL (ON)" or "BRING ALL (OFF)"
+	itemScanBtn.Text = itemScanEnabled and "ESCANEO ITEMS (ON)" or "ESCANEO ITEMS (OFF)"; itemScanBtn.BackgroundColor3 = itemScanEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(0, 150, 200)
+	fakeNpcBtn.Text = fakeNpcEnabled and "FALSO NPC (ON)" or "FALSO NPC (OFF)"; fakeNpcBtn.BackgroundColor3 = fakeNpcEnabled and Color3.fromRGB(255, 150, 0) or Color3.fromRGB(80, 80, 80)
+	if isTargeting then targetBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0); targetBtn.Text = "ATACANDO: " .. (targetPlayer and targetPlayer.Name or "...") else targetBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0); targetBtn.Text = "TARGET HITBOX" end
+	bringAllBtn.BackgroundColor3 = bringAllEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(160, 32, 240); bringAllBtn.Text = bringAllEnabled and "BRING ALL (ON)" or "BRING ALL (OFF)"
 end)
 
 listFrame.Size = UDim2.new(1, 10, 0, (#misEmotes + 6) * 34 + 20)
-
-toggleBtn.MouseButton1Click:Connect(function()
-	listFrame.Visible = not listFrame.Visible
-	toggleBtn.Text = listFrame.Visible and "CERRAR" or "ACCIONES"
-end)
-
+toggleBtn.MouseButton1Click:Connect(function() listFrame.Visible = not listFrame.Visible; toggleBtn.Text = listFrame.Visible and "CERRAR" or "ACCIONES" end)
 sliderKnob.MouseButton1Down:Connect(function() draggingSlider = true end)
 targetBox.FocusLost:Connect(function(ep) if ep then local f = findTarget(targetBox.Text); if f then targetPlayer, isTargeting = f, true; targetBox.Text = "Objetivo: "..f.Name; targetBox.TextColor3 = Color3.new(0,1,0) else targetPlayer, isTargeting = nil, false; targetBox.Text = "No encontrado"; targetBox.TextColor3 = Color3.new(1,0,0); task.wait(1); targetBox.Text, targetBox.TextColor3 = "", Color3.new(1,1,1) end end end)
 UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType.Touch then draggingSlider = false end end)
 UserInputService.InputBegan:Connect(function(input, gp) if gp then return end
 	if input.KeyCode == Enum.KeyCode.X then sliderBarBackground.Visible = not sliderBarBackground.Visible end
-	if input.KeyCode == Enum.KeyCode.F then toggleAnim(ID_SENTARSE) elseif input.KeyCode == Enum.KeyCode.G then toggleAnim(ID_TORNADO)
-	elseif input.KeyCode == Enum.KeyCode.H then toggleAnim(ID_BERRINCHE) elseif input.KeyCode == Enum.KeyCode.J then toggleAnim(ID_CUTE)
-	elseif input.KeyCode == Enum.KeyCode.K then toggleAnim(ID_INVISIBLE) end
+	if input.KeyCode == Enum.KeyCode.F then toggleAnim(ID_SENTARSE) 
+	elseif input.KeyCode == Enum.KeyCode.G then toggleAnim(ID_TORNADO)
+	elseif input.KeyCode == Enum.KeyCode.H then toggleAnim(ID_BERRINCHE) 
+	elseif input.KeyCode == Enum.KeyCode.J then toggleAnim(ID_CUTE)
+	elseif input.KeyCode == Enum.KeyCode.K then toggleAnim(ID_INVISIBLE) 
+	elseif input.KeyCode == Enum.KeyCode.L then toggleAnim(ID_FLOTANDO)
+	elseif input.KeyCode == Enum.KeyCode.M then toggleAnim(ID_ESQUIAR) -- NUEVA TECLA ASIGNADA
+	end
 end)
