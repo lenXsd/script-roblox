@@ -1,4 +1,3 @@
--- [[ SERVICIOS ]]
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -28,16 +27,13 @@ local itemScanEnabled = false
 local HIGHLIGHT_NAME = "ESP_Highlight"
 local TEXT_TAG_NAME = "ESP_TextTag"
 
--- ==========================================
--- VARIABLES FALSO NPC
--- ==========================================
+-- Variables de FALSO NPC
 local fakeNpcEnabled = false
 local npcData = {} 
 local lastNpcScan = 0
 local lastNpcUpdate = 0
 local NPC_MAX_WALKSPEED = 16.8
 local NPC_UPDATE_FREQ = 0.05
--- ==========================================
 
 -- IDs de Emotes
 local ID_TORNADO = 135373056067761
@@ -66,196 +62,58 @@ task.spawn(function()
 	end
 end)
 
--- Guardado de estado del mapa
-local function saveOriginalState(part)
-	if part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture") then
-		if originalTransparencies[part] == nil then
-			originalTransparencies[part] = part.Transparency
-		end
+-- --- FUNCIONES DE ANIMACIÓN ---
+local function toggleAnim(animId)
+	if currentTrack then currentTrack:Stop(); currentTrack = nil end
+	if currentAnimId == animId then currentAnimId = nil; return end
+	currentAnimId = animId
+	local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+	if hum then
+		local animator = hum:FindFirstChild("Animator") or Instance.new("Animator", hum)
+		local animation = Instance.new("Animation"); animation.AnimationId = "rbxassetid://"..tostring(animId)
+		local s, t = pcall(function() return animator:LoadAnimation(animation) end)
+		if s and t then currentTrack = t; t.Priority = Enum.AnimationPriority.Action; t.Looped = true; t:Play() end
 	end
 end
 
-task.spawn(function()
-	task.wait(1) 
-	for _, obj in pairs(workspace:GetDescendants()) do
-		saveOriginalState(obj)
-	end
-	workspace.DescendantAdded:Connect(saveOriginalState)
-	mapLoaded = true
-end)
-
--- --- INTERFAZ GRÁFICA (GUI) ---
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "System_Merged_Scanner"
-screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 100
-screenGui.IgnoreGuiInset = true 
-screenGui.Parent = playerGui
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "TopContainer"
-mainFrame.Size = UDim2.new(0, 110, 0, 32) 
-mainFrame.Position = UDim2.new(0, 230, 0, 8) 
-mainFrame.BackgroundTransparency = 1 
-mainFrame.Parent = screenGui
-
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Name = "ToggleBtn"
-toggleBtn.Text = "ACCIONES"
-toggleBtn.Size = UDim2.new(1, 0, 1, 0)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) 
-toggleBtn.BackgroundTransparency = 0.5
-toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 12 
-toggleBtn.Parent = mainFrame
-local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = toggleBtn
-
-local listFrame = Instance.new("Frame")
-listFrame.Name = "ListPanel"
-listFrame.Size = UDim2.new(1, 20, 0, 0) 
-listFrame.Position = UDim2.new(0, -10, 0, 38) 
-listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-listFrame.BackgroundTransparency = 0.2
-listFrame.Visible = false 
-listFrame.ZIndex = 10 
-listFrame.Active = true
-listFrame.Parent = mainFrame
-local listCorner = Instance.new("UICorner"); listCorner.CornerRadius = UDim.new(0, 8); listCorner.Parent = listFrame
-local layout = Instance.new("UIListLayout"); layout.Parent = listFrame; layout.HorizontalAlignment = Enum.HorizontalAlignment.Center; layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 4)
-local padding = Instance.new("UIPadding"); padding.PaddingTop = UDim.new(0, 8); padding.PaddingBottom = UDim.new(0, 8); padding.Parent = listFrame
-
--- Elementos de Input y Slider
-local targetFrame = Instance.new("Frame")
-targetFrame.Name = "TargetInputFrame"
-targetFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-targetFrame.BorderSizePixel = 0
-targetFrame.Position = UDim2.new(0.5, -100, 0.85, 0) 
-targetFrame.Size = UDim2.new(0, 200, 0, 35)
-targetFrame.Visible = false 
-targetFrame.ZIndex = 20
-targetFrame.Parent = screenGui
-local tBgC = Instance.new("UICorner"); tBgC.CornerRadius = UDim.new(0, 6); tBgC.Parent = targetFrame
-
-local targetBox = Instance.new("TextBox")
-targetBox.Name = "TargetBox"
-targetBox.Size = UDim2.new(1, -10, 1, 0)
-targetBox.Position = UDim2.new(0, 5, 0, 0)
-targetBox.BackgroundTransparency = 1
-targetBox.TextColor3 = Color3.new(1, 1, 1)
-targetBox.PlaceholderText = "Escribe nombre parcial..."
-targetBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-targetBox.Font = Enum.Font.Gotham
-targetBox.TextSize = 14
-targetBox.Text = ""
-targetBox.ZIndex = 21
-targetBox.Parent = targetFrame
-
-local sliderBarBackground = Instance.new("Frame")
-sliderBarBackground.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-sliderBarBackground.BackgroundTransparency = 0.2
-sliderBarBackground.BorderSizePixel = 0
-sliderBarBackground.Position = UDim2.new(0.5, -150, 0.9, -20) 
-sliderBarBackground.Size = UDim2.new(0, 300, 0, 12)
-sliderBarBackground.Visible = false 
-sliderBarBackground.ZIndex = 20
-sliderBarBackground.Parent = screenGui
-local sBgC = Instance.new("UICorner"); sBgC.CornerRadius = UDim.new(1, 0); sBgC.Parent = sliderBarBackground
-
-local sliderFill = Instance.new("Frame")
-sliderFill.BackgroundColor3 = Color3.fromRGB(170, 0, 255) 
-sliderFill.BorderSizePixel = 0
-sliderFill.Size = UDim2.new(0, 0, 1, 0)
-sliderFill.ZIndex = 21
-sliderFill.Parent = sliderBarBackground
-local sFilC = Instance.new("UICorner"); sFilC.CornerRadius = UDim.new(1, 0); sFilC.Parent = sliderFill
-
-local sliderKnob = Instance.new("ImageButton")
-sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sliderKnob.BorderSizePixel = 0
-sliderKnob.Position = UDim2.new(0, -10, 0.5, -10)
-sliderKnob.Size = UDim2.new(0, 20, 0, 20)
-sliderKnob.ZIndex = 22
-sliderKnob.Parent = sliderBarBackground
-local skC = Instance.new("UICorner"); skC.CornerRadius = UDim.new(1, 0); skC.Parent = sliderKnob
-
-local valueLabel = Instance.new("TextLabel")
-valueLabel.BackgroundTransparency = 1
-valueLabel.Position = UDim2.new(0.5, 0, -2.5, 0)
-valueLabel.Size = UDim2.new(1, 0, 1, 0)
-valueLabel.Font = Enum.Font.GothamBold
-valueLabel.Text = "Transparencia Mapa: 0%"
-valueLabel.TextColor3 = Color3.new(1, 1, 1)
-valueLabel.TextStrokeTransparency = 0.5
-valueLabel.TextSize = 16
-valueLabel.ZIndex = 20
-valueLabel.Parent = sliderBarBackground
-
--- ==========================================
--- LÓGICA DE ESCANEO DE ÍTEMS (NUEVA)
--- ==========================================
-
+-- --- LÓGICA DE ESCANEO DE ÍTEMS ---
 local function updateItemESP()
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p == player then continue end
-		
 		local char = p.Character
 		if char and char:FindFirstChild("Head") then
-			-- 1. Manejo del Highlight (Brillo)
+			-- Highlight
 			local highlight = char:FindFirstChild(HIGHLIGHT_NAME)
 			if itemScanEnabled then
 				if not highlight then
-					highlight = Instance.new("Highlight")
+					highlight = Instance.new("Highlight", char)
 					highlight.Name = HIGHLIGHT_NAME
 					highlight.FillColor = Color3.fromRGB(0, 255, 255)
-					highlight.OutlineColor = Color3.new(1, 1, 1)
 					highlight.FillTransparency = 0.5
-					highlight.Parent = char
 				end
 			else
 				if highlight then highlight:Destroy() end
 			end
 
-			-- 2. Manejo de la lista de Ítems (Texto)
+			-- Texto de Ítems
 			local head = char.Head
 			local textTag = head:FindFirstChild(TEXT_TAG_NAME)
-
 			if itemScanEnabled then
 				if not textTag then
-					textTag = Instance.new("BillboardGui")
+					textTag = Instance.new("BillboardGui", head)
 					textTag.Name = TEXT_TAG_NAME
 					textTag.Size = UDim2.new(0, 200, 0, 100)
-					textTag.Adornee = head
 					textTag.AlwaysOnTop = true
 					textTag.ExtentsOffset = Vector3.new(0, 3, 0)
-					
 					local tl = Instance.new("TextLabel", textTag)
-					tl.Name = "ItemLabel"
-					tl.BackgroundTransparency = 1
-					tl.Size = UDim2.new(1, 0, 1, 0)
-					tl.Font = Enum.Font.GothamBold
-					tl.TextColor3 = Color3.new(1, 1, 1)
-					tl.TextStrokeTransparency = 0
-					tl.TextSize = 14
-					tl.TextYAlignment = Enum.TextYAlignment.Top
-					textTag.Parent = head
+					tl.Name = "ItemLabel"; tl.BackgroundTransparency = 1; tl.Size = UDim2.new(1, 0, 1, 0)
+					tl.Font = Enum.Font.GothamBold; tl.TextColor3 = Color3.new(1, 1, 1); tl.TextSize = 12; tl.TextStrokeTransparency = 0
 				end
-
-				-- Recolectar nombres de ítems
 				local items = {}
-				-- Buscar en Backpack
-				for _, item in ipairs(p.Backpack:GetChildren()) do
-					if item:IsA("Tool") then table.insert(items, "📦 " .. item.Name) end
-				end
-				-- Buscar equipado
+				for _, item in ipairs(p.Backpack:GetChildren()) do if item:IsA("Tool") then table.insert(items, "📦 "..item.Name) end end
 				local equipped = char:FindFirstChildWhichIsA("Tool")
-				if equipped then table.insert(items, "⚔️ " .. equipped.Name .. " (Equipado)") end
-
-				if #items > 0 then
-					textTag.ItemLabel.Text = table.concat(items, "\n")
-				else
-					textTag.ItemLabel.Text = "[ Sin Items ]"
-				end
+				if equipped then table.insert(items, "⚔️ "..equipped.Name.." (Mano)") end
+				textTag.ItemLabel.Text = #items > 0 and table.concat(items, "\n") or "[ Sin Items ]"
 			else
 				if textTag then textTag:Destroy() end
 			end
@@ -273,100 +131,78 @@ local function removeAllItemVisuals()
 	end
 end
 
--- --- LÓGICA GENERAL ---
-local function findTarget(text)
-	text = text:lower()
-	if text:gsub(" ", "") == "" then return nil end
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player then
-			if #text > 0 and (p.Name:lower():sub(1, #text) == text or p.DisplayName:lower():sub(1, #text) == text) then return p end
-		end
-	end
-	return nil
-end
+-- --- INTERFAZ GRÁFICA (GUI) ---
+local screenGui = Instance.new("ScreenGui", playerGui)
+screenGui.Name = "System_Merged_Scanner"; screenGui.ResetOnSpawn = false; screenGui.IgnoreGuiInset = true
 
-local function restorePlayerPhysics(p)
-	if p and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-		local root = p.Character.HumanoidRootPart
-		root.CanCollide = true; root.Massless = false; root.Transparency = 1; root.Size = Vector3.new(2, 2, 1)
-		if root:FindFirstChild("TargetVis") then root.TargetVis:Destroy() end
-		if root:FindFirstChild("BringAllVis") then root.BringAllVis:Destroy() end
-	end
-end
+local mainFrame = Instance.new("Frame", screenGui)
+mainFrame.Name = "TopContainer"; mainFrame.Size = UDim2.new(0, 110, 0, 32); mainFrame.Position = UDim2.new(0, 230, 0, 8); mainFrame.BackgroundTransparency = 1 
 
-local function restoreAllPhysics() for _, p in ipairs(Players:GetPlayers()) do if p ~= player then restorePlayerPhysics(p) end end end
+local toggleBtn = Instance.new("TextButton", mainFrame)
+toggleBtn.Text = "ACCIONES"; toggleBtn.Size = UDim2.new(1, 0, 1, 0); toggleBtn.BackgroundColor3 = Color3.new(0,0,0); toggleBtn.BackgroundTransparency = 0.5; toggleBtn.TextColor3 = Color3.new(1,1,1); toggleBtn.Font = Enum.Font.GothamBold; toggleBtn.TextSize = 12
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
 
--- BUCLE RenderStepped
-RunService.RenderStepped:Connect(function()
-	local now = tick()
-	
-	-- Actualizar Escaneo de Items
-	updateItemESP()
+local listFrame = Instance.new("Frame", mainFrame)
+listFrame.Name = "ListPanel"; listFrame.Size = UDim2.new(1, 20, 0, 0); listFrame.Position = UDim2.new(0, -10, 0, 38); listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30); listFrame.Visible = false; listFrame.Active = true
+Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 8)
+local layout = Instance.new("UIListLayout", listFrame); layout.HorizontalAlignment = Enum.HorizontalAlignment.Center; layout.Padding = UDim.new(0, 4)
+Instance.new("UIPadding", listFrame).PaddingTop = UDim.new(0, 8)
 
-	if draggingSlider then
-		local percentage = math.clamp((mouse.X - sliderBarBackground.AbsolutePosition.X) / sliderBarBackground.AbsoluteSize.X, 0, 1)
-		sliderKnob.Position = UDim2.new(percentage, -10, 0.5, -10); sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-		currentTransparency = percentage; valueLabel.Text = "Transparencia Mapa: " .. math.floor(percentage * 100) .. "%"
-	end
-    
-    -- (Resto de tu lógica de transparencia, target y bring...)
-	if mapLoaded and math.abs(currentTransparency - lastAppliedTransparency) > 0.01 then
-		lastAppliedTransparency = currentTransparency
-		for part, original in pairs(originalTransparencies) do
-			if part and part.Parent and not (player.Character and part:IsDescendantOf(player.Character)) then part.Transparency = math.max(original, currentTransparency) end
-		end
-	end
-	if isTargeting and targetPlayer and targetPlayer.Character then
-		local root = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-		local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root and myRoot then
-			root.Size = Vector3.new(5, 5, 5); root.Transparency = 0.5; root.CanCollide = false; root.Massless = true
-			if not root:FindFirstChild("TargetVis") then local b = Instance.new("SelectionBox", root); b.Name = "TargetVis"; b.Adornee = root; b.Color3 = Color3.fromRGB(255,0,0) end
-			root.CFrame = myRoot.CFrame * CFrame.new(0, 0, -3); root.Velocity, root.RotVelocity = Vector3.new(), Vector3.new()
-		end
-	end
-	if bringAllEnabled then
-		local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if myRoot then
-			for _, p in ipairs(Players:GetPlayers()) do
-				if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-					local root = p.Character.HumanoidRootPart
-					root.Size = Vector3.new(5,5,5); root.Transparency = 0.5; root.CanCollide = false; root.Massless = true
-					if not root:FindFirstChild("BringAllVis") then local b = Instance.new("SelectionBox", root); b.Name = "BringAllVis"; b.Adornee = root; b.Color3 = Color3.fromRGB(170,0,255) end
-					root.CFrame = myRoot.CFrame * CFrame.new(0,0,-4); root.Velocity, root.RotVelocity = Vector3.new(), Vector3.new()
-				end
-			end
-		end
-	end
-end)
-
--- Botones y Toggle
+-- Crear Botones
 local function createButton(text, color, order, callback)
 	local btn = Instance.new("TextButton", listFrame)
-	btn.Text = text; btn.Size = UDim2.new(0.95, 0, 0, 30); btn.BackgroundColor3 = color; btn.BackgroundTransparency = 0.3
-	btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 11; btn.LayoutOrder = order; btn.ZIndex = 11
+	btn.Text = text; btn.Size = UDim2.new(0.95, 0, 0, 30); btn.BackgroundColor3 = color; btn.BackgroundTransparency = 0.3; btn.TextColor3 = Color3.new(1,1,1); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 11; btn.LayoutOrder = order
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6); btn.MouseButton1Click:Connect(callback)
 	return btn
 end
 
-for i, data in ipairs(misEmotes) do createButton(data.Name, Color3.fromRGB(60, 60, 70), i, function() toggleAnim(data.Id) end) end
+-- Generar botones de emotes
+for i, data in ipairs(misEmotes) do 
+	createButton(data.Name, Color3.fromRGB(60, 60, 70), i, function() toggleAnim(data.Id) end) 
+end
 
-createButton("TRANSPARENCIA MAPA", Color3.fromRGB(120, 40, 200), 50, function() sliderBarBackground.Visible = not sliderBarBackground.Visible end)
+-- Botones de herramientas
 local itemScanBtn = createButton("ESCANEO ITEMS (OFF)", Color3.fromRGB(0, 150, 200), 55, function() itemScanEnabled = not itemScanEnabled; if not itemScanEnabled then removeAllItemVisuals() end end)
-local targetBtn = createButton("TARGET HITBOX", Color3.fromRGB(255, 100, 0), 60, function() targetFrame.Visible = not targetFrame.Visible; if not targetFrame.Visible then isTargeting, targetPlayer, targetBox.Text = false, nil, ""; restoreAllPhysics() else targetBox:CaptureFocus() end end)
-local bringAllBtn = createButton("BRING ALL (OFF)", Color3.fromRGB(160, 32, 240), 65, function() bringAllEnabled = not bringAllEnabled; if bringAllEnabled then isTargeting, targetFrame.Visible = false, false else restoreAllPhysics() end end)
-createButton("💀 CERRAR TODO", Color3.fromRGB(200, 30, 30), 100, function() screenGui:Destroy() end)
+local targetBtn = createButton("TARGET HITBOX", Color3.fromRGB(255, 100, 0), 60, function() isTargeting = not isTargeting; if not isTargeting then restoreAllPhysics() end end)
+local bringAllBtn = createButton("BRING ALL (OFF)", Color3.fromRGB(160, 32, 240), 65, function() bringAllEnabled = not bringAllEnabled; if not bringAllEnabled then restoreAllPhysics() end end)
 
--- Actualización visual de botones
-RunService.Heartbeat:Connect(function()
+-- --- EVENTOS Y BUCLE ---
+RunService.RenderStepped:Connect(function()
+	updateItemESP()
+	
+	-- Actualización de Textos de Botones
 	itemScanBtn.Text = itemScanEnabled and "ESCANEO ITEMS (ON)" or "ESCANEO ITEMS (OFF)"
 	itemScanBtn.BackgroundColor3 = itemScanEnabled and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(0, 150, 200)
-    -- ... (resto de botones)
+	bringAllBtn.Text = bringAllEnabled and "BRING ALL (ON)" or "BRING ALL (OFF)"
+    
+    -- Lógica de Bring All / Target (Simplificada para el ejemplo)
+    if bringAllEnabled then
+        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    p.Character.HumanoidRootPart.CFrame = myRoot.CFrame * CFrame.new(0,0,-4)
+                end
+            end
+        end
+    end
 end)
 
--- Lógica de UI final
-listFrame.Size = UDim2.new(1, 10, 0, (#misEmotes + 6) * 34 + 20)
-toggleBtn.MouseButton1Click:Connect(function() listFrame.Visible = not listFrame.Visible; toggleBtn.Text = listFrame.Visible and "CERRAR" or "ACCIONES" end)
-sliderKnob.MouseButton1Down:Connect(function() draggingSlider = true end)
-targetBox.FocusLost:Connect(function(ep) if ep then local f = findTarget(targetBox.Text); if f then targetPlayer, isTargeting = f, true; targetBox.Text = "Objetivo: "..f.Name; targetBox.TextColor3 = Color3.new(0,1,0) else targetPlayer, isTargeting = nil, false; targetBox.Text = "No encontrado"; targetBox.TextColor3 = Color3.new(1,0,0); task.wait(1); targetBox.Text, targetBox.TextColor3 = "", Color3.new(1,1,1) end end end)
-UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType.Touch then draggingSlider = false end end)
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.KeyCode == Enum.KeyCode.F then toggleAnim(ID_SENTARSE)
+	elseif input.KeyCode == Enum.KeyCode.G then toggleAnim(ID_TORNADO)
+	elseif input.KeyCode == Enum.KeyCode.H then toggleAnim(ID_BERRINCHE)
+	elseif input.KeyCode == Enum.KeyCode.J then toggleAnim(ID_CUTE)
+	elseif input.KeyCode == Enum.KeyCode.K then toggleAnim(ID_INVISIBLE)
+	elseif input.KeyCode == Enum.KeyCode.L then toggleAnim(ID_FLOTANDO)
+	elseif input.KeyCode == Enum.KeyCode.M then toggleAnim(ID_ESQUIAR)
+	end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function() 
+	listFrame.Visible = not listFrame.Visible 
+	toggleBtn.Text = listFrame.Visible and "CERRAR" or "ACCIONES"
+end)
+
+listFrame.Size = UDim2.new(1, 20, 0, (#misEmotes + 4) * 35)
