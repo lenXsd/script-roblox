@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local PlayersService = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local PathfindingService = game:GetService("PathfindingService")
+local Lighting = game:GetService("Lighting")
 
 local conexionesActivas = {}
 
@@ -22,7 +23,7 @@ menuContent.Parent = screenGui
 menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
 menuContent.BorderSizePixel = 2
-menuContent.Size = UDim2.new(0, 180, 0, 370)
+menuContent.Size = UDim2.new(0, 180, 0, 410) -- Altura ajustada para el nuevo botón
 menuContent.BackgroundTransparency = 0.3 
 menuContent.Position = UDim2.new(0, 10, 0, 50) 
 menuContent.Visible = false 
@@ -43,7 +44,7 @@ toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 
--- Función auxiliar para crear botones del menú
+-- Función auxiliar para crear botones del menú principal
 local function crearBotonMenu(nombre, texto, posY, colorFondo, fuente)
 	local btn = Instance.new("TextButton")
 	btn.Name = nombre
@@ -66,7 +67,8 @@ local botonOpcion5 = crearBotonMenu("Opcion5", "Resaltar (R): OFF", 170)
 local botonOpcion6 = crearBotonMenu("Opcion6", "Teleport", 210)
 local botonOpcionRastreo = crearBotonMenu("OpcionRastreo", "Rastreo (V)", 250)
 local botonOpcionEspectador = crearBotonMenu("OpcionEspectador", "Espectador", 290)
-local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 330, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
+local botonOpcionUtilidades = crearBotonMenu("OpcionUtilidades", "Cámara / Niebla", 330)
+local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 370, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
 
 -- Submenú de Teleport
 local tpMenu = Instance.new("Frame")
@@ -231,6 +233,95 @@ local UICornerDetener = Instance.new("UICorner")
 UICornerDetener.CornerRadius = UDim.new(0, 8)
 UICornerDetener.Parent = BotonDetener
 
+-- Nuevo Submenú de Utilidades (Niebla y Cámara) con diseño mejorado
+local utilFrame = Instance.new("Frame")
+utilFrame.Name = "UtilidadesMenu"
+utilFrame.Size = UDim2.new(0, 210, 0, 175)
+utilFrame.Position = UDim2.new(1, -230, 0, 20)
+utilFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+utilFrame.BackgroundTransparency = 0.15
+utilFrame.BorderSizePixel = 0
+utilFrame.Visible = false
+utilFrame.Active = true
+utilFrame.Parent = screenGui
+
+local utilCorner = Instance.new("UICorner")
+utilCorner.CornerRadius = UDim.new(0, 10)
+utilCorner.Parent = utilFrame
+
+local utilStroke = Instance.new("UIStroke")
+utilStroke.Color = Color3.fromRGB(20, 20, 25)
+utilStroke.Thickness = 2
+utilStroke.Parent = utilFrame
+
+local utilTitulo = Instance.new("TextLabel")
+utilTitulo.Parent = utilFrame
+utilTitulo.Size = UDim2.new(1, 0, 0, 30)
+utilTitulo.BackgroundTransparency = 1
+utilTitulo.Text = "ENTORNO Y CÁMARA"
+utilTitulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+utilTitulo.Font = Enum.Font.SourceSansBold
+utilTitulo.TextSize = 16
+
+local function crearBotonUtilidad(nombre, texto, posY, colorFondo)
+	local btn = Instance.new("TextButton")
+	btn.Name = nombre
+	btn.Size = UDim2.new(0.88, 0, 0, 36)
+	btn.Position = UDim2.new(0.06, 0, 0, posY)
+	btn.Text = texto
+	btn.Font = Enum.Font.SourceSansBold
+	btn.TextSize = 16
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.BackgroundColor3 = colorFondo
+	btn.Parent = utilFrame
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = btn
+	return btn
+end
+
+local btnQuitarNiebla = crearBotonUtilidad("BtnQuitarNiebla", "Quitar Niebla", 38, Color3.fromRGB(45, 135, 65))
+local btnDesbloquearCamara = crearBotonUtilidad("BtnDesbloquearCamara", "Desbloquear Cámara", 82, Color3.fromRGB(50, 95, 170))
+local btnDestruir = crearBotonUtilidad("BtnDestruir", "Borrar y Destruir", 126, Color3.fromRGB(170, 45, 45))
+
+-- Sistema de arrastre suave para el submenú de Utilidades
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function updateDrag(input)
+	local delta = input.Position - dragStart
+	utilFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+table.insert(conexionesActivas, utilFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = utilFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end))
+
+table.insert(conexionesActivas, utilFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end))
+
+table.insert(conexionesActivas, UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		updateDrag(input)
+	end
+end))
+
 -- Lógica de visibilidad de menús
 local menuEstaVisible = false
 local function onToggleClick()
@@ -249,6 +340,33 @@ local function enOpcionEspectadorClick()
 	if specMenu then
 		specMenu.Visible = not specMenu.Visible
 	end
+end
+
+local function enOpcionUtilidadesClick()
+	if utilFrame then
+		utilFrame.Visible = not utilFrame.Visible
+	end
+end
+
+-- Funciones de Niebla y Desbloqueo de Cámara
+local function onQuitarNieblaClick()
+	Lighting.FogEnd = 1000000
+	Lighting.FogStart = 0
+	
+	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+	if atmosphere then
+		atmosphere.Density = 0
+	end
+	btnQuitarNiebla.Text = "Niebla Eliminada"
+	btnQuitarNiebla.BackgroundColor3 = Color3.fromRGB(60, 160, 80)
+end
+
+local function onDesbloquearCamaraClick()
+	player.CameraMode = Enum.CameraMode.Classic
+	player.CameraMaxZoomDistance = 400
+	player.CameraMinZoomDistance = 0.5
+	btnDesbloquearCamara.Text = "Cámara Desbloqueada"
+	btnDesbloquearCamara.BackgroundColor3 = Color3.fromRGB(70, 120, 200)
 end
 
 -- Lógica de Seguimiento
@@ -721,7 +839,6 @@ local function bucleCamaraLibre(deltaTime)
 
 	local stickIzq, stickDer, subirMando, bajarMando, turboMando = leerEstadoMando()
 
-	-- 1. Rotación con Ratón (Clic Derecho)
 	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 		local delta = UserInputService:GetMouseDelta()
@@ -731,7 +848,6 @@ local function bucleCamaraLibre(deltaTime)
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	end
 
-	-- 2. Rotación con Mando (Stick Derecho / Thumbstick2)
 	if stickDer.Magnitude > 0 then
 		camYaw = camYaw - (stickDer.X * SENSIBILIDAD_MANDO * deltaTime)
 		camPitch = math.clamp(camPitch + (stickDer.Y * SENSIBILIDAD_MANDO * deltaTime), -math.rad(89), math.rad(89))
@@ -740,7 +856,6 @@ local function bucleCamaraLibre(deltaTime)
 	local rotacionCFrame = CFrame.Angles(0, camYaw, 0) * CFrame.Angles(camPitch, 0, 0)
 	local direccionMovimiento = Vector3.zero
 
-	-- 3. Movimiento con Teclado
 	if not UserInputService:GetFocusedTextBox() then
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then direccionMovimiento += rotacionCFrame.LookVector end
 		if UserInputService:IsKeyDown(Enum.KeyCode.S) then direccionMovimiento -= rotacionCFrame.LookVector end
@@ -754,7 +869,6 @@ local function bucleCamaraLibre(deltaTime)
 		end
 	end
 
-	-- 4. Movimiento con Mando (Stick Izquierdo y Gatillos/Botones superiores)
 	if stickIzq.Magnitude > 0 then
 		direccionMovimiento += (rotacionCFrame.LookVector * stickIzq.Y) + (rotacionCFrame.RightVector * stickIzq.X)
 	end
@@ -765,7 +879,6 @@ local function bucleCamaraLibre(deltaTime)
 		direccionMovimiento -= Vector3.new(0, bajarMando, 0)
 	end
 
-	-- 5. Aplicación de Velocidad y Turbo (LeftShift o L3/X en Mando)
 	local usaTurbo = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or turboMando
 	local multiplicador = usaTurbo and 2.5 or 1
 
@@ -952,8 +1065,13 @@ local function detenerScriptCompleto()
 	
 	screenGui = nil; menuContent = nil; toggleButton = nil
 	botonOpcion1 = nil; botonOpcion2 = nil; botonOpcion3 = nil; botonOpcion4 = nil
-	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcionRastreo = nil; botonOpcionEspectador = nil; botonOpcion7 = nil
-	FrameRastreo = nil; specMenu = nil
+	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcionRastreo = nil; botonOpcionEspectador = nil
+	botonOpcionUtilidades = nil; botonOpcion7 = nil
+	FrameRastreo = nil; specMenu = nil; utilFrame = nil
+
+	if script then
+		script:Destroy()
+	end
 end
 
 -- Entradas de Teclado y Mouse Unificadas
@@ -983,6 +1101,7 @@ table.insert(conexionesActivas, botonOpcion5.MouseButton1Click:Connect(enOpcion5
 table.insert(conexionesActivas, botonOpcion6.MouseButton1Click:Connect(enOpcion6Click))
 table.insert(conexionesActivas, botonOpcionRastreo.MouseButton1Click:Connect(enOpcionRastreoClick))
 table.insert(conexionesActivas, botonOpcionEspectador.MouseButton1Click:Connect(enOpcionEspectadorClick))
+table.insert(conexionesActivas, botonOpcionUtilidades.MouseButton1Click:Connect(enOpcionUtilidadesClick))
 table.insert(conexionesActivas, botonOpcion7.MouseButton1Click:Connect(detenerScriptCompleto))
 
 table.insert(conexionesActivas, BotonRastrear.MouseButton1Click:Connect(onBotonRastrearClick))
@@ -990,6 +1109,10 @@ table.insert(conexionesActivas, BotonDetener.MouseButton1Click:Connect(detenerSc
 
 table.insert(conexionesActivas, specTargetButton.MouseButton1Click:Connect(onSpecTargetClick))
 table.insert(conexionesActivas, specFreeButton.MouseButton1Click:Connect(onSpecFreeClick))
+
+table.insert(conexionesActivas, btnQuitarNiebla.MouseButton1Click:Connect(onQuitarNieblaClick))
+table.insert(conexionesActivas, btnDesbloquearCamara.MouseButton1Click:Connect(onDesbloquearCamaraClick))
+table.insert(conexionesActivas, btnDestruir.MouseButton1Click:Connect(detenerScriptCompleto))
 
 table.insert(conexionesActivas, menuContent:GetPropertyChangedSignal("Position"):Connect(function()
 	local newMenuPos = menuContent.Position
