@@ -22,7 +22,7 @@ menuContent.Parent = screenGui
 menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
 menuContent.BorderSizePixel = 2
-menuContent.Size = UDim2.new(0, 180, 0, 370) -- Altura ajustada para incluir Espectador
+menuContent.Size = UDim2.new(0, 180, 0, 370)
 menuContent.BackgroundTransparency = 0.3 
 menuContent.Position = UDim2.new(0, 10, 0, 50) 
 menuContent.Visible = false 
@@ -458,6 +458,7 @@ local function reiniciarTemporizadorDePausa(inputObject)
 	if not autoAimActivo then return end
 	if inputObject.UserInputType == Enum.UserInputType.MouseMovement or
 	   inputObject.UserInputType == Enum.UserInputType.Touch or
+	   inputObject.UserInputType == Enum.UserInputType.Gamepad1 or
 	   inputObject.UserInputType == Enum.UserInputType.Gamepad2 then
 		tiempoSinMoverse = 0
 	end
@@ -592,7 +593,7 @@ local function enOpcion6Click()
 	if tpMenu then tpMenu.Visible = not tpMenu.Visible end
 end
 
--- Lógica de Modo Espectador (Fijar Jugador + Cámara Libre con Personaje Anclado)
+-- Lógica de Modo Espectador (Teclado, Ratón y Mando Xbox/Gamepad)
 local espectandoJugador = false
 local camaraLibreActiva = false
 local conexionCamaraLibre = nil
@@ -600,6 +601,15 @@ local camPos = Vector3.zero
 local camPitch, camYaw = 0, 0
 local VELOCIDAD_CAMARA = 50
 local SENSIBILIDAD_RATON = 0.004
+local SENSIBILIDAD_MANDO = 2.5
+local ZONA_MUERTA_MANDO = 0.15
+
+local function filtrarZonaMuerta(valor)
+	if math.abs(valor) < ZONA_MUERTA_MANDO then
+		return 0
+	end
+	return valor
+end
 
 local function establecerAnclajeLocal(anclar)
 	local char = player.Character
@@ -671,11 +681,47 @@ local function onSpecTargetClick()
 	end
 end
 
+local function leerEstadoMando()
+	local stickIzq = Vector2.zero
+	local stickDer = Vector2.zero
+	local subirMando = 0
+	local bajarMando = 0
+	local turboMando = false
+
+	local estados = UserInputService:GetGamepadState(Enum.UserInputType.Gamepad1)
+	for _, input in ipairs(estados) do
+		if input.KeyCode == Enum.KeyCode.Thumbstick1 then
+			stickIzq = Vector2.new(filtrarZonaMuerta(input.Position.X), filtrarZonaMuerta(input.Position.Y))
+		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
+			stickDer = Vector2.new(filtrarZonaMuerta(input.Position.X), filtrarZonaMuerta(input.Position.Y))
+		elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
+			subirMando = math.max(subirMando, filtrarZonaMuerta(input.Position.Z))
+		elseif input.KeyCode == Enum.KeyCode.ButtonL2 then
+			bajarMando = math.max(bajarMando, filtrarZonaMuerta(input.Position.Z))
+		end
+	end
+
+	if UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonR1) then
+		subirMando = 1
+	end
+	if UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonL1) then
+		bajarMando = 1
+	end
+	if UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonL3) or
+	   UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonX) then
+		turboMando = true
+	end
+
+	return stickIzq, stickDer, subirMando, bajarMando, turboMando
+end
+
 local function bucleCamaraLibre(deltaTime)
 	camera = workspace.CurrentCamera
 	if not camera then return end
 
-	-- Rotación manteniendo presionado el Clic Derecho
+	local stickIzq, stickDer, subirMando, bajarMando, turboMando = leerEstadoMando()
+
+	-- 1. Rotación con Ratón (Clic Derecho)
 	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 		local delta = UserInputService:GetMouseDelta()
@@ -685,9 +731,16 @@ local function bucleCamaraLibre(deltaTime)
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	end
 
+	-- 2. Rotación con Mando (Stick Derecho / Thumbstick2)
+	if stickDer.Magnitude > 0 then
+		camYaw = camYaw - (stickDer.X * SENSIBILIDAD_MANDO * deltaTime)
+		camPitch = math.clamp(camPitch + (stickDer.Y * SENSIBILIDAD_MANDO * deltaTime), -math.rad(89), math.rad(89))
+	end
+
 	local rotacionCFrame = CFrame.Angles(0, camYaw, 0) * CFrame.Angles(camPitch, 0, 0)
 	local direccionMovimiento = Vector3.zero
 
+	-- 3. Movimiento con Teclado
 	if not UserInputService:GetFocusedTextBox() then
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then direccionMovimiento += rotacionCFrame.LookVector end
 		if UserInputService:IsKeyDown(Enum.KeyCode.S) then direccionMovimiento -= rotacionCFrame.LookVector end
@@ -701,9 +754,24 @@ local function bucleCamaraLibre(deltaTime)
 		end
 	end
 
-	local multiplicador = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 2.5 or 1
+	-- 4. Movimiento con Mando (Stick Izquierdo y Gatillos/Botones superiores)
+	if stickIzq.Magnitude > 0 then
+		direccionMovimiento += (rotacionCFrame.LookVector * stickIzq.Y) + (rotacionCFrame.RightVector * stickIzq.X)
+	end
+	if subirMando > 0 then
+		direccionMovimiento += Vector3.new(0, subirMando, 0)
+	end
+	if bajarMando > 0 then
+		direccionMovimiento -= Vector3.new(0, bajarMando, 0)
+	end
+
+	-- 5. Aplicación de Velocidad y Turbo (LeftShift o L3/X en Mando)
+	local usaTurbo = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or turboMando
+	local multiplicador = usaTurbo and 2.5 or 1
+
 	if direccionMovimiento.Magnitude > 0 then
-		camPos = camPos + (direccionMovimiento.Unit * VELOCIDAD_CAMARA * multiplicador * deltaTime)
+		local magnitudLimitada = math.min(direccionMovimiento.Magnitude, 1)
+		camPos = camPos + (direccionMovimiento.Unit * magnitudLimitada * VELOCIDAD_CAMARA * multiplicador * deltaTime)
 	end
 
 	camera.CFrame = CFrame.new(camPos) * rotacionCFrame
@@ -888,7 +956,7 @@ local function detenerScriptCompleto()
 	FrameRastreo = nil; specMenu = nil
 end
 
--- Entradas de Teclado y Mouse Unificadas (sin tecla para Espectador)
+-- Entradas de Teclado y Mouse Unificadas
 local function onInput(input, gameProcessed)
 	if input.UserInputType == Enum.UserInputType.MouseButton3 then
 		enOpcion3Click()
