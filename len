@@ -9,6 +9,12 @@ local UserInputService = game:GetService("UserInputService")
 local PathfindingService = game:GetService("PathfindingService")
 local Lighting = game:GetService("Lighting")
 
+-- Eliminar versión anterior de la GUI si quedó abierta en PlayerGui
+local guiAnterior = playerGui:FindFirstChild("MenuScripted")
+if guiAnterior then
+	guiAnterior:Destroy()
+end
+
 local conexionesActivas = {}
 
 -- GUI Principal
@@ -17,18 +23,33 @@ screenGui.Name = "MenuScripted"
 screenGui.ResetOnSpawn = false 
 screenGui.Parent = playerGui
 
-local menuContent = Instance.new("Frame")
+-- ScrollingFrame para que ningún botón se corte o desaparezca por la resolución
+local menuContent = Instance.new("ScrollingFrame")
 menuContent.Name = "MenuContent"
 menuContent.Parent = screenGui
 menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
 menuContent.BorderSizePixel = 2
-menuContent.Size = UDim2.new(0, 180, 0, 410) -- Altura ajustada para el nuevo botón
+menuContent.Size = UDim2.new(0, 190, 0, 320)
+menuContent.CanvasSize = UDim2.new(0, 0, 0, 380)
+menuContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+menuContent.ScrollBarThickness = 6
 menuContent.BackgroundTransparency = 0.3 
 menuContent.Position = UDim2.new(0, 10, 0, 50) 
 menuContent.Visible = false 
 menuContent.Draggable = true
 menuContent.Active = true 
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = menuContent
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+listLayout.Padding = UDim.new(0, 8)
+
+local listPadding = Instance.new("UIPadding")
+listPadding.Parent = menuContent
+listPadding.PaddingTop = UDim.new(0, 10)
+listPadding.PaddingBottom = UDim.new(0, 10)
 
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
@@ -44,10 +65,13 @@ toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 
--- Función auxiliar para crear botones del menú principal
-local function crearBotonMenu(nombre, texto, posY, colorFondo, fuente)
+-- Función auxiliar para crear botones ordenados de arriba a abajo
+local ordenBoton = 0
+local function crearBotonMenu(nombre, texto, colorFondo, fuente)
+	ordenBoton = ordenBoton + 1
 	local btn = Instance.new("TextButton")
 	btn.Name = nombre
+	btn.LayoutOrder = ordenBoton
 	btn.Parent = menuContent
 	btn.BackgroundColor3 = colorFondo or Color3.fromRGB(70, 70, 85)
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -55,20 +79,19 @@ local function crearBotonMenu(nombre, texto, posY, colorFondo, fuente)
 	btn.TextSize = 18
 	btn.Text = texto
 	btn.Size = UDim2.new(0.9, 0, 0, 30)
-	btn.Position = UDim2.new(0.05, 0, 0, posY)
 	return btn
 end
 
-local botonOpcion1 = crearBotonMenu("Opcion1", "Seguir Jugador (T)", 10)
-local botonOpcion2 = crearBotonMenu("Opcion2", "Autoapuntado: OFF", 50)
-local botonOpcion3 = crearBotonMenu("Opcion3", "Seguir (Player) (M3)", 90)
-local botonOpcion4 = crearBotonMenu("Opcion4", "Salto Aire", 130)
-local botonOpcion5 = crearBotonMenu("Opcion5", "Resaltar (R): OFF", 170)
-local botonOpcion6 = crearBotonMenu("Opcion6", "Teleport", 210)
-local botonOpcionRastreo = crearBotonMenu("OpcionRastreo", "Rastreo (V)", 250)
-local botonOpcionEspectador = crearBotonMenu("OpcionEspectador", "Espectador", 290)
-local botonOpcionUtilidades = crearBotonMenu("OpcionUtilidades", "Cámara / Niebla", 330)
-local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 370, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
+local botonOpcion1 = crearBotonMenu("Opcion1", "Seguir Jugador (T)")
+local botonOpcion2 = crearBotonMenu("Opcion2", "Autoapuntado: OFF")
+local botonOpcion3 = crearBotonMenu("Opcion3", "Seguir (Player) (M3)")
+local botonOpcion4 = crearBotonMenu("Opcion4", "Salto Aire")
+local botonOpcion5 = crearBotonMenu("Opcion5", "Resaltar (R): OFF")
+local botonOpcion6 = crearBotonMenu("Opcion6", "Teleport")
+local botonOpcionRastreo = crearBotonMenu("OpcionRastreo", "Rastreo (V)")
+local botonOpcionEspectador = crearBotonMenu("OpcionEspectador", "Espectador")
+local botonOpcionUtilidades = crearBotonMenu("OpcionUtilidades", "Cámara / Niebla", Color3.fromRGB(50, 95, 150))
+local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
 
 -- Submenú de Teleport
 local tpMenu = Instance.new("Frame")
@@ -175,7 +198,7 @@ FrameRastreo.BackgroundTransparency = 0.1
 FrameRastreo.Size = UDim2.new(0, 220, 0, 300)
 FrameRastreo.Visible = false
 FrameRastreo.AnchorPoint = Vector2.new(1, 0)
-FrameRastreo.Position = UDim2.new(1, -20, 0, -50)
+FrameRastreo.Position = UDim2.new(1, -20, 0, 20)
 
 local UICornerFrame = Instance.new("UICorner")
 UICornerFrame.CornerRadius = UDim.new(0, 10)
@@ -233,11 +256,11 @@ local UICornerDetener = Instance.new("UICorner")
 UICornerDetener.CornerRadius = UDim.new(0, 8)
 UICornerDetener.Parent = BotonDetener
 
--- Nuevo Submenú de Utilidades (Niebla y Cámara) con diseño mejorado
+-- Submenú de Utilidades (Niebla y Cámara)
 local utilFrame = Instance.new("Frame")
 utilFrame.Name = "UtilidadesMenu"
 utilFrame.Size = UDim2.new(0, 210, 0, 175)
-utilFrame.Position = UDim2.new(1, -230, 0, 20)
+utilFrame.Position = UDim2.new(0.5, 120, 0.5, -85)
 utilFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 utilFrame.BackgroundTransparency = 0.15
 utilFrame.BorderSizePixel = 0
@@ -285,7 +308,7 @@ local btnQuitarNiebla = crearBotonUtilidad("BtnQuitarNiebla", "Quitar Niebla", 3
 local btnDesbloquearCamara = crearBotonUtilidad("BtnDesbloquearCamara", "Desbloquear Cámara", 82, Color3.fromRGB(50, 95, 170))
 local btnDestruir = crearBotonUtilidad("BtnDestruir", "Borrar y Destruir", 126, Color3.fromRGB(170, 45, 45))
 
--- Sistema de arrastre suave para el submenú de Utilidades
+-- Sistema de arrastre para el submenú de Utilidades
 local dragging = false
 local dragInput = nil
 local dragStart = nil
