@@ -22,7 +22,7 @@ menuContent.Parent = screenGui
 menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
 menuContent.BorderSizePixel = 2
-menuContent.Size = UDim2.new(0, 180, 0, 330) -- Altura ajustada para incluir el botón de Rastreo
+menuContent.Size = UDim2.new(0, 180, 0, 370) -- Altura ajustada para incluir Espectador
 menuContent.BackgroundTransparency = 0.3 
 menuContent.Position = UDim2.new(0, 10, 0, 50) 
 menuContent.Visible = false 
@@ -43,7 +43,7 @@ toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 
--- Función auxiliar para no repetir código al crear botones del menú
+-- Función auxiliar para crear botones del menú
 local function crearBotonMenu(nombre, texto, posY, colorFondo, fuente)
 	local btn = Instance.new("TextButton")
 	btn.Name = nombre
@@ -65,7 +65,8 @@ local botonOpcion4 = crearBotonMenu("Opcion4", "Salto Aire", 130)
 local botonOpcion5 = crearBotonMenu("Opcion5", "Resaltar (R): OFF", 170)
 local botonOpcion6 = crearBotonMenu("Opcion6", "Teleport", 210)
 local botonOpcionRastreo = crearBotonMenu("OpcionRastreo", "Rastreo (V)", 250)
-local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 290, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
+local botonOpcionEspectador = crearBotonMenu("OpcionEspectador", "Espectador", 290)
+local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 330, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
 
 -- Submenú de Teleport
 local tpMenu = Instance.new("Frame")
@@ -115,7 +116,55 @@ tpLoopButton.Font = Enum.Font.SourceSansBold
 tpLoopButton.Size = UDim2.new(0.425, 0, 0, 40)
 tpLoopButton.Position = UDim2.new(0.525, 0, 0, 50)
 
--- Submenú de Rastreo Híbrido (integrado al mismo ScreenGui)
+-- Submenú de Espectador (Fijar Jugador + Cámara Libre)
+local specMenu = Instance.new("Frame")
+specMenu.Name = "SpectateMenu"
+specMenu.Parent = screenGui
+specMenu.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+specMenu.BorderColor3 = Color3.fromRGB(20, 20, 20)
+specMenu.BorderSizePixel = 2
+specMenu.Size = UDim2.new(0, 220, 0, 100)
+specMenu.Position = UDim2.new(0.5, -110, 0.5, 65)
+specMenu.BackgroundTransparency = 0.3
+specMenu.Visible = false
+specMenu.Draggable = true
+specMenu.Active = true
+
+local specNameBox = Instance.new("TextBox")
+specNameBox.Name = "SpecNameBox"
+specNameBox.Parent = specMenu
+specNameBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+specNameBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+specNameBox.Text = ""
+specNameBox.PlaceholderText = "Jugador a observar..."
+specNameBox.TextSize = 16
+specNameBox.Font = Enum.Font.SourceSans
+specNameBox.Size = UDim2.new(0.9, 0, 0, 30)
+specNameBox.Position = UDim2.new(0.05, 0, 0, 10)
+
+local specTargetButton = Instance.new("TextButton")
+specTargetButton.Name = "SpecTargetButton"
+specTargetButton.Parent = specMenu
+specTargetButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+specTargetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+specTargetButton.Text = "Ver Jugador"
+specTargetButton.TextSize = 15
+specTargetButton.Font = Enum.Font.SourceSansBold
+specTargetButton.Size = UDim2.new(0.425, 0, 0, 40)
+specTargetButton.Position = UDim2.new(0.05, 0, 0, 50)
+
+local specFreeButton = Instance.new("TextButton")
+specFreeButton.Name = "SpecFreeButton"
+specFreeButton.Parent = specMenu
+specFreeButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+specFreeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+specFreeButton.Text = "Cámara Libre"
+specFreeButton.TextSize = 15
+specFreeButton.Font = Enum.Font.SourceSansBold
+specFreeButton.Size = UDim2.new(0.425, 0, 0, 40)
+specFreeButton.Position = UDim2.new(0.525, 0, 0, 50)
+
+-- Submenú de Rastreo Híbrido
 local FrameRastreo = Instance.new("Frame")
 FrameRastreo.Name = "MenuPrincipal"
 FrameRastreo.Parent = screenGui
@@ -182,7 +231,7 @@ local UICornerDetener = Instance.new("UICorner")
 UICornerDetener.CornerRadius = UDim.new(0, 8)
 UICornerDetener.Parent = BotonDetener
 
--- Lógica de visibilidad del menú
+-- Lógica de visibilidad de menús
 local menuEstaVisible = false
 local function onToggleClick()
 	menuEstaVisible = not menuEstaVisible
@@ -196,7 +245,13 @@ local function enOpcionRastreoClick()
 	end
 end
 
--- Lógica de Seguimiento (Unificada sin duplicación)
+local function enOpcionEspectadorClick()
+	if specMenu then
+		specMenu.Visible = not specMenu.Visible
+	end
+end
+
+-- Lógica de Seguimiento
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.FilterDescendantsInstances = {} 
@@ -494,7 +549,7 @@ local function enOpcion5Click()
 	end
 end
 
--- Lógica de Búsqueda por Nombre y Teleport (Unificada)
+-- Lógica de Búsqueda por Nombre y Teleport
 local tpLoopActive = false
 local conexionTpLoop = nil
 
@@ -535,6 +590,146 @@ end
 
 local function enOpcion6Click()
 	if tpMenu then tpMenu.Visible = not tpMenu.Visible end
+end
+
+-- Lógica de Modo Espectador (Fijar Jugador + Cámara Libre con Personaje Anclado)
+local espectandoJugador = false
+local camaraLibreActiva = false
+local conexionCamaraLibre = nil
+local camPos = Vector3.zero
+local camPitch, camYaw = 0, 0
+local VELOCIDAD_CAMARA = 50
+local SENSIBILIDAD_RATON = 0.004
+
+local function establecerAnclajeLocal(anclar)
+	local char = player.Character
+	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+	if rootPart then
+		rootPart.Anchored = anclar
+	end
+end
+
+local function restaurarCamaraYPersonaje()
+	espectandoJugador = false
+	camaraLibreActiva = false
+
+	if conexionCamaraLibre then
+		conexionCamaraLibre:Disconnect()
+		conexionCamaraLibre = nil
+	end
+
+	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+	establecerAnclajeLocal(false)
+
+	camera = workspace.CurrentCamera
+	if camera then
+		camera.CameraType = Enum.CameraType.Custom
+		local char = player.Character
+		local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			camera.CameraSubject = humanoid
+		end
+	end
+
+	if specTargetButton then
+		specTargetButton.Text = "Ver Jugador"
+		specTargetButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+	end
+	if specFreeButton then
+		specFreeButton.Text = "Cámara Libre"
+		specFreeButton.BackgroundColor3 = Color3.fromRGB(0, 110, 255)
+	end
+end
+
+local function onSpecTargetClick()
+	if espectandoJugador then
+		restaurarCamaraYPersonaje()
+		return
+	end
+
+	local targetPlayer = buscarJugador(specNameBox.Text, true)
+	local targetHumanoid = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+	if targetHumanoid then
+		restaurarCamaraYPersonaje()
+		espectandoJugador = true
+		specNameBox.Text = targetPlayer.Name
+		establecerAnclajeLocal(true)
+
+		camera = workspace.CurrentCamera
+		camera.CameraType = Enum.CameraType.Custom
+		camera.CameraSubject = targetHumanoid
+
+		specTargetButton.Text = "Salir Vista"
+		specTargetButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+	else
+		specTargetButton.Text = "No hallado"
+		task.wait(1)
+		if not espectandoJugador then
+			specTargetButton.Text = "Ver Jugador"
+		end
+	end
+end
+
+local function bucleCamaraLibre(deltaTime)
+	camera = workspace.CurrentCamera
+	if not camera then return end
+
+	-- Rotación manteniendo presionado el Clic Derecho
+	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+		local delta = UserInputService:GetMouseDelta()
+		camYaw = camYaw - delta.X * SENSIBILIDAD_RATON
+		camPitch = math.clamp(camPitch - delta.Y * SENSIBILIDAD_RATON, -math.rad(89), math.rad(89))
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+	end
+
+	local rotacionCFrame = CFrame.Angles(0, camYaw, 0) * CFrame.Angles(camPitch, 0, 0)
+	local direccionMovimiento = Vector3.zero
+
+	if not UserInputService:GetFocusedTextBox() then
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then direccionMovimiento += rotacionCFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then direccionMovimiento -= rotacionCFrame.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then direccionMovimiento += rotacionCFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then direccionMovimiento -= rotacionCFrame.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+			direccionMovimiento += Vector3.new(0, 1, 0)
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Q) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+			direccionMovimiento -= Vector3.new(0, 1, 0)
+		end
+	end
+
+	local multiplicador = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 2.5 or 1
+	if direccionMovimiento.Magnitude > 0 then
+		camPos = camPos + (direccionMovimiento.Unit * VELOCIDAD_CAMARA * multiplicador * deltaTime)
+	end
+
+	camera.CFrame = CFrame.new(camPos) * rotacionCFrame
+end
+
+local function onSpecFreeClick()
+	if camaraLibreActiva then
+		restaurarCamaraYPersonaje()
+		return
+	end
+
+	restaurarCamaraYPersonaje()
+	camaraLibreActiva = true
+	establecerAnclajeLocal(true)
+
+	camera = workspace.CurrentCamera
+	camPos = camera.CFrame.Position
+	local rx, ry, _ = camera.CFrame:ToEulerAnglesYXZ()
+	camPitch = rx
+	camYaw = ry
+
+	camera.CameraType = Enum.CameraType.Scriptable
+	conexionCamaraLibre = RunService.RenderStepped:Connect(bucleCamaraLibre)
+
+	specFreeButton.Text = "Salir Libre"
+	specFreeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 end
 
 -- Lógica de Rastreo Híbrido
@@ -662,6 +857,7 @@ end
 -- Limpieza y Detención Total Unificada
 local function detenerScriptCompleto()
 	detenerAutoapuntado()
+	restaurarCamaraYPersonaje()
 	
 	estaSiguiendo = false
 	if conexionDeSeguimiento then conexionDeSeguimiento:Disconnect(); conexionDeSeguimiento = nil end
@@ -688,11 +884,11 @@ local function detenerScriptCompleto()
 	
 	screenGui = nil; menuContent = nil; toggleButton = nil
 	botonOpcion1 = nil; botonOpcion2 = nil; botonOpcion3 = nil; botonOpcion4 = nil
-	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcionRastreo = nil; botonOpcion7 = nil
-	FrameRastreo = nil
+	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcionRastreo = nil; botonOpcionEspectador = nil; botonOpcion7 = nil
+	FrameRastreo = nil; specMenu = nil
 end
 
--- Entradas de Teclado y Mouse Unificadas
+-- Entradas de Teclado y Mouse Unificadas (sin tecla para Espectador)
 local function onInput(input, gameProcessed)
 	if input.UserInputType == Enum.UserInputType.MouseButton3 then
 		enOpcion3Click()
@@ -718,10 +914,14 @@ table.insert(conexionesActivas, botonOpcion4.MouseButton1Click:Connect(enOpcion4
 table.insert(conexionesActivas, botonOpcion5.MouseButton1Click:Connect(enOpcion5Click))
 table.insert(conexionesActivas, botonOpcion6.MouseButton1Click:Connect(enOpcion6Click))
 table.insert(conexionesActivas, botonOpcionRastreo.MouseButton1Click:Connect(enOpcionRastreoClick))
+table.insert(conexionesActivas, botonOpcionEspectador.MouseButton1Click:Connect(enOpcionEspectadorClick))
 table.insert(conexionesActivas, botonOpcion7.MouseButton1Click:Connect(detenerScriptCompleto))
 
 table.insert(conexionesActivas, BotonRastrear.MouseButton1Click:Connect(onBotonRastrearClick))
 table.insert(conexionesActivas, BotonDetener.MouseButton1Click:Connect(detenerScriptCompleto))
+
+table.insert(conexionesActivas, specTargetButton.MouseButton1Click:Connect(onSpecTargetClick))
+table.insert(conexionesActivas, specFreeButton.MouseButton1Click:Connect(onSpecFreeClick))
 
 table.insert(conexionesActivas, menuContent:GetPropertyChangedSignal("Position"):Connect(function()
 	local newMenuPos = menuContent.Position
@@ -741,6 +941,9 @@ table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopB
 local function conectarEventosDePersonaje(character)
 	if raycastParams then
 		raycastParams.FilterDescendantsInstances = {character}
+	end
+	if espectandoJugador or camaraLibreActiva then
+		restaurarCamaraYPersonaje()
 	end
 end
 
