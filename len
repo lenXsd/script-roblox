@@ -2,7 +2,7 @@
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Servicios
+-- Servicios unificados
 local RunService = game:GetService("RunService")
 local PlayersService = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -10,6 +10,7 @@ local PathfindingService = game:GetService("PathfindingService")
 
 local conexionesActivas = {}
 
+-- GUI Principal
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MenuScripted"
 screenGui.ResetOnSpawn = false 
@@ -21,7 +22,7 @@ menuContent.Parent = screenGui
 menuContent.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
 menuContent.BorderColor3 = Color3.fromRGB(20, 20, 20)
 menuContent.BorderSizePixel = 2
-menuContent.Size = UDim2.new(0, 180, 0, 290) 
+menuContent.Size = UDim2.new(0, 180, 0, 330) -- Altura ajustada para incluir el botón de Rastreo
 menuContent.BackgroundTransparency = 0.3 
 menuContent.Position = UDim2.new(0, 10, 0, 50) 
 menuContent.Visible = false 
@@ -42,84 +43,31 @@ toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.TextSize = 18
 
-local botonOpcion1 = Instance.new("TextButton")
-botonOpcion1.Name = "Opcion1"
-botonOpcion1.Parent = menuContent
-botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion1.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion1.Font = Enum.Font.SourceSans
-botonOpcion1.TextSize = 18
-botonOpcion1.Text = "Seguir Jugador (T)" 
-botonOpcion1.Size = UDim2.new(0.9, 0, 0, 30) 
-botonOpcion1.Position = UDim2.new(0.05, 0, 0, 10) 
+-- Función auxiliar para no repetir código al crear botones del menú
+local function crearBotonMenu(nombre, texto, posY, colorFondo, fuente)
+	local btn = Instance.new("TextButton")
+	btn.Name = nombre
+	btn.Parent = menuContent
+	btn.BackgroundColor3 = colorFondo or Color3.fromRGB(70, 70, 85)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = fuente or Enum.Font.SourceSans
+	btn.TextSize = 18
+	btn.Text = texto
+	btn.Size = UDim2.new(0.9, 0, 0, 30)
+	btn.Position = UDim2.new(0.05, 0, 0, posY)
+	return btn
+end
 
-local botonOpcion2 = Instance.new("TextButton")
-botonOpcion2.Name = "Opcion2"
-botonOpcion2.Parent = menuContent
-botonOpcion2.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion2.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion2.Font = Enum.Font.SourceSans
-botonOpcion2.TextSize = 18
-botonOpcion2.Text = "Autoapuntado: OFF"
-botonOpcion2.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion2.Position = UDim2.new(0.05, 0, 0, 50) 
+local botonOpcion1 = crearBotonMenu("Opcion1", "Seguir Jugador (T)", 10)
+local botonOpcion2 = crearBotonMenu("Opcion2", "Autoapuntado: OFF", 50)
+local botonOpcion3 = crearBotonMenu("Opcion3", "Seguir (Player) (M3)", 90)
+local botonOpcion4 = crearBotonMenu("Opcion4", "Salto Aire", 130)
+local botonOpcion5 = crearBotonMenu("Opcion5", "Resaltar (R): OFF", 170)
+local botonOpcion6 = crearBotonMenu("Opcion6", "Teleport", 210)
+local botonOpcionRastreo = crearBotonMenu("OpcionRastreo", "Rastreo (V)", 250)
+local botonOpcion7 = crearBotonMenu("Opcion7", "DETENER SCRIPT", 290, Color3.fromRGB(170, 40, 40), Enum.Font.SourceSansBold)
 
-local botonOpcion3 = Instance.new("TextButton")
-botonOpcion3.Name = "Opcion3"
-botonOpcion3.Parent = menuContent
-botonOpcion3.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion3.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion3.Font = Enum.Font.SourceSans
-botonOpcion3.TextSize = 18
--- ACTUALIZADO: Texto con atajo M3 --
-botonOpcion3.Text = "Seguir (Player) (M3)"
-botonOpcion3.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion3.Position = UDim2.new(0.05, 0, 0, 90)
-
-local botonOpcion4 = Instance.new("TextButton")
-botonOpcion4.Name = "Opcion4"
-botonOpcion4.Parent = menuContent
-botonOpcion4.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion4.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion4.Font = Enum.Font.SourceSans
-botonOpcion4.TextSize = 18
-botonOpcion4.Text = "Salto Aire"
-botonOpcion4.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion4.Position = UDim2.new(0.05, 0, 0, 130) 
-
-local botonOpcion5 = Instance.new("TextButton")
-botonOpcion5.Name = "Opcion5"
-botonOpcion5.Parent = menuContent
-botonOpcion5.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion5.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion5.Font = Enum.Font.SourceSans
-botonOpcion5.TextSize = 18
-botonOpcion5.Text = "Resaltar (R): OFF"
-botonOpcion5.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion5.Position = UDim2.new(0.05, 0, 0, 170) 
-
-local botonOpcion6 = Instance.new("TextButton")
-botonOpcion6.Name = "Opcion6"
-botonOpcion6.Parent = menuContent
-botonOpcion6.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
-botonOpcion6.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion6.Font = Enum.Font.SourceSans
-botonOpcion6.TextSize = 18
-botonOpcion6.Text = "Teleport"
-botonOpcion6.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion6.Position = UDim2.new(0.05, 0, 0, 210) 
-
-local botonOpcion7 = Instance.new("TextButton")
-botonOpcion7.Name = "Opcion7"
-botonOpcion7.Parent = menuContent
-botonOpcion7.BackgroundColor3 = Color3.fromRGB(170, 40, 40) 
-botonOpcion7.TextColor3 = Color3.fromRGB(255, 255, 255)
-botonOpcion7.Font = Enum.Font.SourceSansBold
-botonOpcion7.TextSize = 18
-botonOpcion7.Text = "DETENER SCRIPT"
-botonOpcion7.Size = UDim2.new(0.9, 0, 0, 30)
-botonOpcion7.Position = UDim2.new(0.05, 0, 0, 250) 
-
+-- Submenú de Teleport
 local tpMenu = Instance.new("Frame")
 tpMenu.Name = "TeleportMenu"
 tpMenu.Parent = screenGui
@@ -167,6 +115,74 @@ tpLoopButton.Font = Enum.Font.SourceSansBold
 tpLoopButton.Size = UDim2.new(0.425, 0, 0, 40)
 tpLoopButton.Position = UDim2.new(0.525, 0, 0, 50)
 
+-- Submenú de Rastreo Híbrido (integrado al mismo ScreenGui)
+local FrameRastreo = Instance.new("Frame")
+FrameRastreo.Name = "MenuPrincipal"
+FrameRastreo.Parent = screenGui
+FrameRastreo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+FrameRastreo.BackgroundTransparency = 0.1
+FrameRastreo.Size = UDim2.new(0, 220, 0, 300)
+FrameRastreo.Visible = false
+FrameRastreo.AnchorPoint = Vector2.new(1, 0)
+FrameRastreo.Position = UDim2.new(1, -20, 0, -50)
+
+local UICornerFrame = Instance.new("UICorner")
+UICornerFrame.CornerRadius = UDim.new(0, 10)
+UICornerFrame.Parent = FrameRastreo
+
+local Titulo = Instance.new("TextLabel")
+Titulo.Parent = FrameRastreo
+Titulo.Size = UDim2.new(1, 0, 0, 30)
+Titulo.BackgroundTransparency = 1
+Titulo.Text = "RASTREO HÍBRIDO"
+Titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
+Titulo.Font = Enum.Font.SourceSansBold
+Titulo.TextSize = 18
+
+local InputNombre = Instance.new("TextBox")
+InputNombre.Parent = FrameRastreo
+InputNombre.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+InputNombre.Size = UDim2.new(0, 180, 0, 35)
+InputNombre.Font = Enum.Font.SourceSans
+InputNombre.PlaceholderText = "Nombre Jugador..."
+InputNombre.Text = ""
+InputNombre.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputNombre.TextSize = 16
+InputNombre.Position = UDim2.new(0, 20, 0, 50)
+
+local UICornerInput = Instance.new("UICorner")
+UICornerInput.CornerRadius = UDim.new(0, 8)
+UICornerInput.Parent = InputNombre
+
+local BotonRastrear = Instance.new("TextButton")
+BotonRastrear.Parent = FrameRastreo
+BotonRastrear.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+BotonRastrear.Size = UDim2.new(0, 180, 0, 35)
+BotonRastrear.Font = Enum.Font.SourceSansBold
+BotonRastrear.Text = "INICIAR RASTREO"
+BotonRastrear.TextColor3 = Color3.fromRGB(255, 255, 255)
+BotonRastrear.TextSize = 14
+BotonRastrear.Position = UDim2.new(0, 20, 0, 100)
+
+local UICornerRastrear = Instance.new("UICorner")
+UICornerRastrear.CornerRadius = UDim.new(0, 8)
+UICornerRastrear.Parent = BotonRastrear
+
+local BotonDetener = Instance.new("TextButton")
+BotonDetener.Parent = FrameRastreo
+BotonDetener.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+BotonDetener.Size = UDim2.new(0, 180, 0, 35)
+BotonDetener.Font = Enum.Font.SourceSansBold
+BotonDetener.Text = "MATAR SCRIPT"
+BotonDetener.TextColor3 = Color3.fromRGB(255, 255, 255)
+BotonDetener.TextSize = 16
+BotonDetener.Position = UDim2.new(0, 20, 1, -45)
+
+local UICornerDetener = Instance.new("UICorner")
+UICornerDetener.CornerRadius = UDim.new(0, 8)
+UICornerDetener.Parent = BotonDetener
+
+-- Lógica de visibilidad del menú
 local menuEstaVisible = false
 local function onToggleClick()
 	menuEstaVisible = not menuEstaVisible
@@ -174,6 +190,13 @@ local function onToggleClick()
 	if menuEstaVisible then toggleButton.Text = "Cerrar" else toggleButton.Text = "Menú" end
 end
 
+local function enOpcionRastreoClick()
+	if FrameRastreo then
+		FrameRastreo.Visible = not FrameRastreo.Visible
+	end
+end
+
+-- Lógica de Seguimiento (Unificada sin duplicación)
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.FilterDescendantsInstances = {} 
@@ -183,7 +206,7 @@ local estaSiguiendoEquipo = false
 local conexionDeSeguimiento = nil
 local conexionSeguimientoEquipo = nil
 
-local function encontrarJugadorMasCercano()
+local function encontrarJugadorMasCercano(filtrarPorEquipo)
 	local jugadorLocalChar = player.Character
 	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
 	local raizLocal = jugadorLocalChar.HumanoidRootPart
@@ -191,13 +214,20 @@ local function encontrarJugadorMasCercano()
 	local objetivo = nil
 	for _, otroJugador in pairs(PlayersService:GetPlayers()) do
 		if otroJugador ~= player then
-			local otroChar = otroJugador.Character
-			if otroChar and otroChar:FindFirstChild("HumanoidRootPart") and otroChar.Humanoid.Health > 0 then
-				local raizObjetivo = otroChar.HumanoidRootPart
-				local distancia = (raizLocal.Position - raizObjetivo.Position).Magnitude
-				if distancia < distanciaMinima then
-					distanciaMinima = distancia
-					objetivo = otroChar
+			local equipoValido = true
+			if filtrarPorEquipo then
+				local equipo = otroJugador.Team
+				equipoValido = equipo and (equipo.Name == "Player" or equipo.Name == "Jugador")
+			end
+			if equipoValido then
+				local otroChar = otroJugador.Character
+				if otroChar and otroChar:FindFirstChild("HumanoidRootPart") and otroChar.Humanoid.Health > 0 then
+					local raizObjetivo = otroChar.HumanoidRootPart
+					local distancia = (raizLocal.Position - raizObjetivo.Position).Magnitude
+					if distancia < distanciaMinima then
+						distanciaMinima = distancia
+						objetivo = otroChar
+					end
 				end
 			end
 		end
@@ -205,7 +235,7 @@ local function encontrarJugadorMasCercano()
 	return objetivo
 end
 
-local function bucleDeSeguimiento()
+local function ejecutarBucleDeSeguimiento(filtrarPorEquipo)
 	local char = player.Character
 	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
@@ -216,7 +246,7 @@ local function bucleDeSeguimiento()
 		return 
 	end
 
-	local objetivo = encontrarJugadorMasCercano()
+	local objetivo = encontrarJugadorMasCercano(filtrarPorEquipo)
 	if not objetivo or not objetivo:FindFirstChild("HumanoidRootPart") then
 		humanoid:MoveTo(rootPart.Position) 
 		return
@@ -264,12 +294,22 @@ local function bucleDeSeguimiento()
 	end
 end
 
+local function detenerMovimientoLocal()
+	local personajeLocal = player.Character
+	local humanoideLocal = personajeLocal and personajeLocal:FindFirstChildOfClass("Humanoid")
+	if humanoideLocal and personajeLocal:FindFirstChild("HumanoidRootPart") then
+		humanoideLocal:MoveTo(personajeLocal.HumanoidRootPart.Position)
+	end
+end
+
 local function enOpcion1Click()
 	estaSiguiendo = not estaSiguiendo
 	if estaSiguiendo then
 		botonOpcion1.Text = "Seguir Jugador: ON"
 		botonOpcion1.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-		conexionDeSeguimiento = RunService.Heartbeat:Connect(bucleDeSeguimiento)
+		conexionDeSeguimiento = RunService.Heartbeat:Connect(function()
+			ejecutarBucleDeSeguimiento(false)
+		end)
 	else
 		botonOpcion1.Text = "Seguir Jugador (T/M3)"
 		botonOpcion1.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
@@ -277,103 +317,18 @@ local function enOpcion1Click()
 			conexionDeSeguimiento:Disconnect()
 			conexionDeSeguimiento = nil
 		end
-		local personajeLocal = player.Character
-		local humanoideLocal = personajeLocal and personajeLocal:FindFirstChildOfClass("Humanoid")
-		if humanoideLocal then
-			humanoideLocal:MoveTo(personajeLocal.HumanoidRootPart.Position)
-		end
+		detenerMovimientoLocal()
 	end
 end
 
-local function encontrarJugadorMasCercanoEnEquipoPlayer()
-	local jugadorLocalChar = player.Character
-	if not jugadorLocalChar or not jugadorLocalChar:FindFirstChild("HumanoidRootPart") then return nil end
-	local raizLocal = jugadorLocalChar.HumanoidRootPart
-	local distanciaMinima = math.huge
-	local objetivo = nil
-	for _, otroJugador in pairs(PlayersService:GetPlayers()) do
-		if otroJugador ~= player then
-			local equipo = otroJugador.Team
-			if equipo and (equipo.Name == "Player" or equipo.Name == "Jugador") then
-				local otroChar = otroJugador.Character
-				if otroChar and otroChar:FindFirstChild("HumanoidRootPart") and otroChar.Humanoid.Health > 0 then
-					local raizObjetivo = otroChar.HumanoidRootPart
-					local distancia = (raizLocal.Position - raizObjetivo.Position).Magnitude
-					if distancia < distanciaMinima then
-						distanciaMinima = distancia
-						objetivo = otroChar
-					end
-				end
-			end
-		end
-	end
-	return objetivo
-end
-
-local function bucleDeSeguimientoEquipo()
-	local char = player.Character
-	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-	local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-	if not humanoid or not rootPart then return end
-
-	if humanoid.MoveDirection.Magnitude > 0.1 then
-		humanoid:Move(humanoid.MoveDirection, false) 
-		return
-	end
-
-	local objetivo = encontrarJugadorMasCercanoEnEquipoPlayer() 
-	if not objetivo or not objetivo:FindFirstChild("HumanoidRootPart") then
-		humanoid:MoveTo(rootPart.Position) 
-		return
-	end
-	
-	local origen = rootPart.Position
-	local destino = objetivo.HumanoidRootPart.Position
-	local direccion = (destino - origen)
-
-	local hayObstaculo = false
-	local rayoOffsetAltura = 2 
-	local rayoOffsetPies = -1.5 
-	local distanciaRayoAdicional = 5 
-	local origenesRayos = {
-		origen, 
-		origen + Vector3.new(0, rayoOffsetAltura, 0), 
-		origen + Vector3.new(0, rayoOffsetPies, 0),
-	}
-	for _, rayoOrigen in ipairs(origenesRayos) do
-		local resultado = workspace:Raycast(rayoOrigen, direccion.Unit * (direccion.Magnitude + distanciaRayoAdicional), raycastParams)
-		if resultado and not resultado.Instance:IsDescendantOf(objetivo) then
-			hayObstaculo = true
-			break
-		end
-	end
-
-	if not hayObstaculo then
-		humanoid:MoveTo(destino)
-	else
-		local path = PathfindingService:CreatePath()
-		local success, _ = pcall(function()
-			path:ComputeAsync(origen, destino)
-		end)
-		
-		if success and path.Status == Enum.PathStatus.Success then
-			local waypoints = path:GetWaypoints()
-			if waypoints[2] then
-				humanoid:MoveTo(waypoints[2].Position)
-			else
-				humanoid:MoveTo(destino)
-			end
-		else
-			humanoid:MoveTo(destino)
-		end
-	end
-end
 local function enOpcion3Click()
 	estaSiguiendoEquipo = not estaSiguiendoEquipo
 	if estaSiguiendoEquipo then
 		botonOpcion3.Text = "Seguir (Player): ON"
 		botonOpcion3.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-		conexionSeguimientoEquipo = RunService.Heartbeat:Connect(bucleDeSeguimientoEquipo)
+		conexionSeguimientoEquipo = RunService.Heartbeat:Connect(function()
+			ejecutarBucleDeSeguimiento(true)
+		end)
 	else
 		botonOpcion3.Text = "Seguir (Player)"
 		botonOpcion3.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
@@ -381,15 +336,11 @@ local function enOpcion3Click()
 			conexionSeguimientoEquipo:Disconnect()
 			conexionSeguimientoEquipo = nil
 		end
-		local personajeLocal = player.Character
-		local humanoideLocal = personajeLocal and personajeLocal:FindFirstChildOfClass("Humanoid")
-		if humanoideLocal then
-			humanoideLocal:MoveTo(personajeLocal.HumanoidRootPart.Position)
-		end
+		detenerMovimientoLocal()
 	end
 end
 
-
+-- Lógica de Autoapuntado y Salto Aire
 local camera = workspace.CurrentCamera
 local conexionDeAutoapuntado = nil
 local autoAimActivo = false 
@@ -412,19 +363,21 @@ local function bucleDeAutoapuntado(deltaTime)
 	if tiempoSinMoverse < TIEMPO_ESPERA_AIM then
 		return
 	end
-	local objetivo = encontrarJugadorMasCercano()
+	local objetivo = encontrarJugadorMasCercano(false)
 	if objetivo and objetivo:FindFirstChild("Head") then
 		local posCamara = camera.CFrame.Position
 		local posObjetivo = objetivo.Head.Position
 		camera.CFrame = CFrame.lookAt(posCamara, posObjetivo)
 	end
 end
+
 local function iniciarAutoapuntado()
 	if not conexionDeAutoapuntado then
 		tiempoSinMoverse = 0 
 		conexionDeAutoapuntado = RunService.RenderStepped:Connect(bucleDeAutoapuntado)
 	end
 end
+
 local function detenerAutoapuntado()
 	if conexionDeAutoapuntado then
 		conexionDeAutoapuntado:Disconnect()
@@ -432,6 +385,7 @@ local function detenerAutoapuntado()
 	end
 	tiempoSinMoverse = 0 
 end
+
 local function enOpcion2Click()
 	autoAimActivo = not autoAimActivo
 	if autoAimActivo then
@@ -444,6 +398,7 @@ local function enOpcion2Click()
 		botonOpcion2.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 	end
 end
+
 local function reiniciarTemporizadorDePausa(inputObject)
 	if not autoAimActivo then return end
 	if inputObject.UserInputType == Enum.UserInputType.MouseMovement or
@@ -462,6 +417,7 @@ local function onJumpRequest()
 		rootPart.Velocity = Vector3.new(rootPart.Velocity.X, humanoid.JumpPower, rootPart.Velocity.Z)
 	end
 end
+
 local function enOpcion4Click()
 	airJumpActivo = not airJumpActivo
 	if airJumpActivo then
@@ -472,6 +428,8 @@ local function enOpcion4Click()
 		botonOpcion4.BackgroundColor3 = Color3.fromRGB(70, 70, 85)
 	end
 end
+
+-- Lógica de Resaltado
 local resaltarActivo = false
 local conexionResaltar = nil
 local highlightObjects = {} 
@@ -529,37 +487,33 @@ local function enOpcion5Click()
 			conexionResaltar = nil
 		end
 		
-		for char, highlight in pairs(highlightObjects) do
+		for _, highlight in pairs(highlightObjects) do
 			if highlight then highlight:Destroy() end
 		end
 		highlightObjects = {}
 	end
 end
 
+-- Lógica de Búsqueda por Nombre y Teleport (Unificada)
 local tpLoopActive = false
 local conexionTpLoop = nil
 
-local function findPlayerByName(name)
-	local nameLower = name:lower()
+local function buscarJugador(texto, revisarDisplayName)
+	local nameLower = texto:lower()
 	if nameLower == "" or nameLower == "escribe un nombre..." then return nil end
 	for _, p in pairs(PlayersService:GetPlayers()) do
 		if p ~= player then
-			if string.find(p.Name:lower(), nameLower, 1, true) then return p.Character end
+			if string.find(p.Name:lower(), nameLower, 1, true) or (revisarDisplayName and string.find(p.DisplayName:lower(), nameLower, 1, true)) then
+				return p
+			end
 		end
 	end
 	return nil
 end
 
-local function bucleTpLoop()
-	local targetChar = findPlayerByName(playerNameBox.Text)
-	local char = player.Character
-	if targetChar and char and char:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
-		char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
-	end
-end
-
-local function onTpButtonClick()
-	local targetChar = findPlayerByName(playerNameBox.Text)
+local function teletransportarAJugador()
+	local targetPlayer = buscarJugador(playerNameBox.Text, false)
+	local targetChar = targetPlayer and targetPlayer.Character
 	local char = player.Character
 	if targetChar and char and char:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
 		char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame
@@ -569,7 +523,7 @@ end
 local function onTpLoopButtonClick()
 	tpLoopActive = not tpLoopActive
 	if tpLoopActive then
-		conexionTpLoop = RunService.Heartbeat:Connect(bucleTpLoop)
+		conexionTpLoop = RunService.Heartbeat:Connect(teletransportarAJugador)
 		tpLoopButton.Text = "Loop: ON"
 		tpLoopButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 	else
@@ -583,191 +537,29 @@ local function enOpcion6Click()
 	if tpMenu then tpMenu.Visible = not tpMenu.Visible end
 end
 
-local function enOpcion7Click()
-	detenerAutoapuntado()
-	
-	estaSiguiendo = false
-	if conexionDeSeguimiento then conexionDeSeguimiento:Disconnect(); conexionDeSeguimiento = nil end
-	estaSiguiendoEquipo = false
-	if conexionSeguimientoEquipo then conexionSeguimientoEquipo:Disconnect(); conexionSeguimientoEquipo = nil end
-	
-	airJumpActivo = false
-	
-	-- Limpiar Resaltado
-	resaltarActivo = false
-	if conexionResaltar then conexionResaltar:Disconnect(); conexionResaltar = nil end
-	for _, highlight in pairs(highlightObjects) do highlight:Destroy() end
-	highlightObjects = {}
-
-	if conexionTpLoop then conexionTpLoop:Disconnect() end
-	
-	for _, con in ipairs(conexionesActivas) do con:Disconnect() end
-	conexionesActivas = {} 
-	
-	if screenGui then screenGui:Destroy() end
-	
-	screenGui = nil; menuContent = nil; toggleButton = nil
-	botonOpcion1 = nil; botonOpcion2 = nil; botonOpcion3 = nil; botonOpcion4 = nil
-	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcion7 = nil
-end
-
-local function onInput(input, gameProcessed)
-	-- 1. Botones del Mouse (M3 activa Opción 3)
-	if input.UserInputType == Enum.UserInputType.MouseButton3 then
-		enOpcion3Click() -- Activar "Seguir (Player)"
-	end
-
-	if not gameProcessed then
-		if input.KeyCode == Enum.KeyCode.T then
-			enOpcion1Click() -- Activar "Seguir Jugador"
-		elseif input.KeyCode == Enum.KeyCode.R then
-			enOpcion5Click() -- Activar "Resaltar"
-		end
-	end
-end
-
-
-table.insert(conexionesActivas, toggleButton.MouseButton1Click:Connect(onToggleClick))
-table.insert(conexionesActivas, botonOpcion1.MouseButton1Click:Connect(enOpcion1Click))
-table.insert(conexionesActivas, botonOpcion2.MouseButton1Click:Connect(enOpcion2Click))
-table.insert(conexionesActivas, botonOpcion3.MouseButton1Click:Connect(enOpcion3Click))
-table.insert(conexionesActivas, botonOpcion4.MouseButton1Click:Connect(enOpcion4Click))
-table.insert(conexionesActivas, botonOpcion5.MouseButton1Click:Connect(enOpcion5Click))
-table.insert(conexionesActivas, botonOpcion6.MouseButton1Click:Connect(enOpcion6Click))
-table.insert(conexionesActivas, botonOpcion7.MouseButton1Click:Connect(enOpcion7Click))
-
-table.insert(conexionesActivas, menuContent:GetPropertyChangedSignal("Position"):Connect(function()
-	local newMenuPos = menuContent.Position
-	toggleButton.Position = UDim2.new(
-		newMenuPos.X.Scale, newMenuPos.X.Offset, 
-		newMenuPos.Y.Scale, newMenuPos.Y.Offset - 40 
-	)
-end))
-
-table.insert(conexionesActivas, UserInputService.InputChanged:Connect(reiniciarTemporizadorDePausa))
-table.insert(conexionesActivas, UserInputService.JumpRequest:Connect(onJumpRequest))
-table.insert(conexionesActivas, UserInputService.InputBegan:Connect(onInput))
-
-table.insert(conexionesActivas, tpButton.MouseButton1Click:Connect(onTpButtonClick))
-table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopButtonClick))
-
-local function conectarEventosDePersonaje(character)
-	if raycastParams then
-		raycastParams.FilterDescendantsInstances = {character}
-	end
-end
-
-table.insert(conexionesActivas, player.CharacterAdded:Connect(conectarEventosDePersonaje))
-
-if player.Character then
-	conectarEventosDePersonaje(player.Character)
-end
--- Inicio del nuevo script
-local Players = game:GetService("Players")
-local PathfindingService = game:GetService("PathfindingService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-
+-- Lógica de Rastreo Híbrido
 local isTracking = false
 local trackingTarget = nil
 local visualFolder = nil
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MenuRastreoHibrido"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false
-
-local BotonMenu = Instance.new("TextButton")
-BotonMenu.Parent = ScreenGui
-BotonMenu.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-BotonMenu.BackgroundTransparency = 0.5
-BotonMenu.Size = UDim2.new(0, 20, 0, 30)
-BotonMenu.Font = Enum.Font.SourceSansBold
-BotonMenu.Text = ""
-BotonMenu.TextColor3 = Color3.fromRGB(255, 255, 255)
-BotonMenu.TextSize = 18
-
-BotonMenu.Position = UDim2.new(0, 345, 0, -50)
-
-local UICornerBoton = Instance.new("UICorner")
-UICornerBoton.CornerRadius = UDim.new(0, 8)
-UICornerBoton.Parent = BotonMenu
-
-local Frame = Instance.new("Frame")
-Frame.Name = "MenuPrincipal"
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Frame.BackgroundTransparency = 0.1
-Frame.Size = UDim2.new(0, 220, 0, 300)
-Frame.Visible = false
-Frame.AnchorPoint = Vector2.new(1, 0)
-
-Frame.Position = UDim2.new(1, -20, 0, -50)
-
-local UICornerFrame = Instance.new("UICorner")
-UICornerFrame.CornerRadius = UDim.new(0, 10)
-UICornerFrame.Parent = Frame
-
-local Titulo = Instance.new("TextLabel")
-Titulo.Parent = Frame
-Titulo.Size = UDim2.new(1, 0, 0, 30)
-Titulo.BackgroundTransparency = 1
-Titulo.Text = "RASTREO HÍBRIDO"
-Titulo.TextColor3 = Color3.fromRGB(255, 255, 255)
-Titulo.Font = Enum.Font.SourceSansBold
-Titulo.TextSize = 18
-
-local InputNombre = Instance.new("TextBox")
-InputNombre.Parent = Frame
-InputNombre.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-InputNombre.Size = UDim2.new(0, 180, 0, 35)
-InputNombre.Font = Enum.Font.SourceSans
-InputNombre.PlaceholderText = "Nombre Jugador..."
-InputNombre.Text = ""
-InputNombre.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputNombre.TextSize = 16
-
-InputNombre.Position = UDim2.new(0, 20, 0, 50)
-
-local UICornerInput = Instance.new("UICorner")
-UICornerInput.CornerRadius = UDim.new(0, 8)
-UICornerInput.Parent = InputNombre
-
-local BotonRastrear = Instance.new("TextButton")
-BotonRastrear.Parent = Frame
-BotonRastrear.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-BotonRastrear.Size = UDim2.new(0, 180, 0, 35)
-BotonRastrear.Font = Enum.Font.SourceSansBold
-BotonRastrear.Text = "INICIAR RASTREO"
-BotonRastrear.TextColor3 = Color3.fromRGB(255, 255, 255)
-BotonRastrear.TextSize = 14
-
-BotonRastrear.Position = UDim2.new(0, 20, 0, 100)
-
-local UICornerRastrear = Instance.new("UICorner")
-UICornerRastrear.CornerRadius = UDim.new(0, 8)
-UICornerRastrear.Parent = BotonRastrear
-
-local BotonDetener = Instance.new("TextButton")
-BotonDetener.Parent = Frame
-BotonDetener.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-BotonDetener.Size = UDim2.new(0, 180, 0, 35)
-BotonDetener.Font = Enum.Font.SourceSansBold
-BotonDetener.Text = "MATAR SCRIPT"
-BotonDetener.TextColor3 = Color3.fromRGB(255, 255, 255)
-BotonDetener.TextSize = 16
-
-BotonDetener.Position = UDim2.new(0, 20, 1, -45)
-
-local UICornerDetener = Instance.new("UICorner")
-UICornerDetener.CornerRadius = UDim.new(0, 8)
-UICornerDetener.Parent = BotonDetener
 
 local function limpiarVisuales()
 	if visualFolder then
 		visualFolder:Destroy()
 		visualFolder = nil
 	end
+end
+
+local function crearParteGuia(posicion)
+	local part = Instance.new("Part")
+	part.Size = Vector3.new(1, 1, 1)
+	part.Position = posicion
+	part.Anchored = true
+	part.CanCollide = false
+	part.Transparency = 1
+	part.Parent = visualFolder
+	local att = Instance.new("Attachment")
+	att.Parent = part
+	return part, att
 end
 
 local function dibujarCamino(waypoints)
@@ -777,17 +569,8 @@ local function dibujarCamino(waypoints)
 	visualFolder.Parent = workspace
 
 	local previousAttachment = nil
-	for i, waypoint in pairs(waypoints) do
-		local part = Instance.new("Part")
-		part.Size = Vector3.new(1, 1, 1)
-		part.Position = waypoint.Position + Vector3.new(0, 2, 0)
-		part.Anchored = true
-		part.CanCollide = false
-		part.Transparency = 1
-		part.Parent = visualFolder
-
-		local attachment = Instance.new("Attachment")
-		attachment.Parent = part
+	for _, waypoint in pairs(waypoints) do
+		local part, attachment = crearParteGuia(waypoint.Position + Vector3.new(0, 2, 0))
 
 		if previousAttachment then
 			local beam = Instance.new("Beam")
@@ -814,25 +597,8 @@ local function dibujarLineaDirecta(startPos, endPos)
 	visualFolder.Name = "RastreoVisuals"
 	visualFolder.Parent = workspace
 
-	local partA = Instance.new("Part")
-	partA.Size = Vector3.new(1, 1, 1)
-	partA.Position = startPos
-	partA.Anchored = true
-	partA.CanCollide = false
-	partA.Transparency = 1
-	partA.Parent = visualFolder
-	local attA = Instance.new("Attachment")
-	attA.Parent = partA
-
-	local partB = Instance.new("Part")
-	partB.Size = Vector3.new(1, 1, 1)
-	partB.Position = endPos
-	partB.Anchored = true
-	partB.CanCollide = false
-	partB.Transparency = 1
-	partB.Parent = visualFolder
-	local attB = Instance.new("Attachment")
-	attB.Parent = partB
+	local partA, attA = crearParteGuia(startPos)
+	local _, attB = crearParteGuia(endPos)
 
 	local beam = Instance.new("Beam")
 	beam.Attachment0 = attA
@@ -847,7 +613,7 @@ end
 local function loopRastreo()
 	task.spawn(function()
 		while isTracking and trackingTarget do
-			local myChar = LocalPlayer.Character
+			local myChar = player.Character
 			local targetChar = trackingTarget.Character
 
 			if myChar and targetChar and myChar:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -869,28 +635,7 @@ local function loopRastreo()
 	end)
 end
 
-local function buscarJugador(texto)
-	texto = string.lower(texto)
-	if texto == "" then return nil end
-	for _, p in pairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer and (string.find(string.lower(p.Name), texto) or string.find(string.lower(p.DisplayName), texto)) then
-			return p
-		end
-	end
-	return nil
-end
-
-BotonMenu.MouseButton1Click:Connect(function()
-	Frame.Visible = not Frame.Visible
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.V then
-		Frame.Visible = not Frame.Visible
-	end
-end)
-
-BotonRastrear.MouseButton1Click:Connect(function()
+local function onBotonRastrearClick()
 	if isTracking then
 		isTracking = false
 		trackingTarget = nil
@@ -898,7 +643,7 @@ BotonRastrear.MouseButton1Click:Connect(function()
 		BotonRastrear.Text = "INICIAR RASTREO"
 		BotonRastrear.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 	else
-		local target = buscarJugador(InputNombre.Text)
+		local target = buscarJugador(InputNombre.Text, true)
 		if target then
 			trackingTarget = target
 			InputNombre.Text = target.Name
@@ -912,12 +657,95 @@ BotonRastrear.MouseButton1Click:Connect(function()
 			BotonRastrear.Text = "INICIAR RASTREO"
 		end
 	end
-end)
+end
 
-BotonDetener.MouseButton1Click:Connect(function()
+-- Limpieza y Detención Total Unificada
+local function detenerScriptCompleto()
+	detenerAutoapuntado()
+	
+	estaSiguiendo = false
+	if conexionDeSeguimiento then conexionDeSeguimiento:Disconnect(); conexionDeSeguimiento = nil end
+	estaSiguiendoEquipo = false
+	if conexionSeguimientoEquipo then conexionSeguimientoEquipo:Disconnect(); conexionSeguimientoEquipo = nil end
+	
+	airJumpActivo = false
+	
+	resaltarActivo = false
+	if conexionResaltar then conexionResaltar:Disconnect(); conexionResaltar = nil end
+	for _, highlight in pairs(highlightObjects) do highlight:Destroy() end
+	highlightObjects = {}
+
+	if conexionTpLoop then conexionTpLoop:Disconnect(); conexionTpLoop = nil end
+	
 	isTracking = false
+	trackingTarget = nil
 	limpiarVisuales()
-	ScreenGui:Destroy()
-	script.Disabled = true
-	script:Destroy()
-end)
+
+	for _, con in ipairs(conexionesActivas) do con:Disconnect() end
+	conexionesActivas = {} 
+	
+	if screenGui then screenGui:Destroy() end
+	
+	screenGui = nil; menuContent = nil; toggleButton = nil
+	botonOpcion1 = nil; botonOpcion2 = nil; botonOpcion3 = nil; botonOpcion4 = nil
+	botonOpcion5 = nil; botonOpcion6 = nil; botonOpcionRastreo = nil; botonOpcion7 = nil
+	FrameRastreo = nil
+end
+
+-- Entradas de Teclado y Mouse Unificadas
+local function onInput(input, gameProcessed)
+	if input.UserInputType == Enum.UserInputType.MouseButton3 then
+		enOpcion3Click()
+	end
+
+	if not gameProcessed then
+		if input.KeyCode == Enum.KeyCode.T then
+			enOpcion1Click()
+		elseif input.KeyCode == Enum.KeyCode.R then
+			enOpcion5Click()
+		elseif input.KeyCode == Enum.KeyCode.V then
+			enOpcionRastreoClick()
+		end
+	end
+end
+
+-- Registro de Conexiones
+table.insert(conexionesActivas, toggleButton.MouseButton1Click:Connect(onToggleClick))
+table.insert(conexionesActivas, botonOpcion1.MouseButton1Click:Connect(enOpcion1Click))
+table.insert(conexionesActivas, botonOpcion2.MouseButton1Click:Connect(enOpcion2Click))
+table.insert(conexionesActivas, botonOpcion3.MouseButton1Click:Connect(enOpcion3Click))
+table.insert(conexionesActivas, botonOpcion4.MouseButton1Click:Connect(enOpcion4Click))
+table.insert(conexionesActivas, botonOpcion5.MouseButton1Click:Connect(enOpcion5Click))
+table.insert(conexionesActivas, botonOpcion6.MouseButton1Click:Connect(enOpcion6Click))
+table.insert(conexionesActivas, botonOpcionRastreo.MouseButton1Click:Connect(enOpcionRastreoClick))
+table.insert(conexionesActivas, botonOpcion7.MouseButton1Click:Connect(detenerScriptCompleto))
+
+table.insert(conexionesActivas, BotonRastrear.MouseButton1Click:Connect(onBotonRastrearClick))
+table.insert(conexionesActivas, BotonDetener.MouseButton1Click:Connect(detenerScriptCompleto))
+
+table.insert(conexionesActivas, menuContent:GetPropertyChangedSignal("Position"):Connect(function()
+	local newMenuPos = menuContent.Position
+	toggleButton.Position = UDim2.new(
+		newMenuPos.X.Scale, newMenuPos.X.Offset, 
+		newMenuPos.Y.Scale, newMenuPos.Y.Offset - 40 
+	)
+end))
+
+table.insert(conexionesActivas, UserInputService.InputChanged:Connect(reiniciarTemporizadorDePausa))
+table.insert(conexionesActivas, UserInputService.JumpRequest:Connect(onJumpRequest))
+table.insert(conexionesActivas, UserInputService.InputBegan:Connect(onInput))
+
+table.insert(conexionesActivas, tpButton.MouseButton1Click:Connect(teletransportarAJugador))
+table.insert(conexionesActivas, tpLoopButton.MouseButton1Click:Connect(onTpLoopButtonClick))
+
+local function conectarEventosDePersonaje(character)
+	if raycastParams then
+		raycastParams.FilterDescendantsInstances = {character}
+	end
+end
+
+table.insert(conexionesActivas, player.CharacterAdded:Connect(conectarEventosDePersonaje))
+
+if player.Character then
+	conectarEventosDePersonaje(player.Character)
+end
